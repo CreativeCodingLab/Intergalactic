@@ -24033,7 +24033,7 @@
 				raycaster.ray.closestPointToPoint( worldPosition, intersectPoint );
 
 				worldScale.setFromMatrixScale( this.matrixWorld );
-				var guessSizeSq = worldScale.x * worldScale.y / 4;
+				var guessSizeSq = worldScale.x * worldScale.y / 16;
 
 				if ( worldPosition.distanceToSquared( intersectPoint ) > guessSizeSq ) return;
 

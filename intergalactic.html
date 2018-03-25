@@ -40,17 +40,22 @@
 
 			uniform float amplitude;
 			attribute float size;
-			attribute vec3 customColor;
+			attribute float isSelected;
+			attribute float customColor;
 
-			varying vec3 vColor;
+			varying float vColor;
+			varying float vSelect;
+			
 
 			void main() {
 
+				vSelect = isSelected;
 				vColor = customColor;
 
 				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 
 				gl_PointSize = size * ( 300.0 / -mvPosition.z );
+				//gl_PointSize = size * 300.0; // * ( 300.0 / -mvPosition.z );
 
 				gl_Position = projectionMatrix * mvPosition;
 
@@ -61,15 +66,47 @@
 		<script type="x-shader/x-fragment" id="fragmentshader">
 
 			uniform vec3 color;
+			uniform vec3 redColor;
+			uniform vec3 blueColor;
 			uniform sampler2D texture;
 
-			varying vec3 vColor;
+			varying float vColor;
+			varying float vSelect;
 
+			const float border = 0.05;
+			
 			void main() {
 
-				gl_FragColor = vec4( color * vColor, 1.0 );
-				gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
 
+				bool selectOn = false;
+			
+				if (vSelect > 0.9 && vSelect < 1.1) {
+					selectOn = true;
+				}
+
+				vec4 useColor;
+
+				//if (selectOn) {
+				//	useColor = vec4(1.0,1.0,1.0,1.0);
+				//} else {
+					if (vColor > -0.1 && vColor < 0.1) {
+						useColor = vec4(redColor.rgb,1.0);
+					} else if (vColor > 0.9 && vColor < 1.1) {
+						useColor = vec4(blueColor.rgb,1.0);
+					} else {
+						useColor = vec4(0.0,1.0,0.0,1.0);
+					}
+				//}
+
+				if (selectOn && (gl_PointCoord.x < border || gl_PointCoord.x > 1.0-border || gl_PointCoord.y < border || gl_PointCoord.y > 1.0-border)) {
+					gl_FragColor = useColor;
+				} else {
+
+				vec4 textureColor = useColor * texture2D( texture, gl_PointCoord );
+				//vec4 backgroundColor = vec4(0.5, 0.5, 0.5, 1.0);
+				//vec4 finalColor = mix(textureColor, backgroundColor, 0.5);
+				gl_FragColor = vec4(color.rgb,1.0) * textureColor;
+				}
 			}
 
 		</script>
