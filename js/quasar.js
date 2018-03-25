@@ -72,6 +72,8 @@ function onMouseMove( event ) {
 	for ( var i = 0; i < intersects.length; i++ ) {
 		var p = intersects[ i ];
 		
+		//console.log(p);
+
 		if (p.object.type == "Points" && p.distanceToRay < 0.2) {
 			//console.log(p);
 			pointOverIdx = p.index;
@@ -112,6 +114,22 @@ function onMouseMove( event ) {
 
 	}
 	
+
+
+	//intersect with skewers - not doing anything with this yet...
+	intersects = raycaster.intersectObjects( cylinderGroup.children );
+
+	for ( var i = 0; i < intersects.length; i++ ) {
+		var p = intersects[ i ];
+		
+		//console.log(p);
+
+		if ( cylinderGroup.visible == true && p.object.type == "Mesh") {
+			console.log(p);
+			//pointOverIdx = p.index;
+			break;
+		}
+	}
 
 
 
@@ -320,7 +338,7 @@ function processGalaxyData(data) {
 	var color = new THREE.Color( 0xffffff );
 
 	var idx = 0;
-	//for ( var i = 1; i < 50; i++, idx++ ) {
+	//for ( var i = 1; i < 20; i++, idx++ ) {
 	for ( var i = 1; i < rows.length - 1; i ++, idx++ ) {
 
 		var cells = rows[i].split(" ");
@@ -411,7 +429,7 @@ function processGalaxyData(data) {
 		//Label  (x,y) = (-0.166381,0.062923) as ‘Coma cluster’ //z position??
 
 		let sprite = new THREE.TextSprite({
-			textSize: 1.2,
+			textSize: 0.7,
 			redrawInterval: 250,
 			texture: {
 				text: 'Coma cluster',
@@ -438,7 +456,7 @@ function processGalaxyData(data) {
 }
 
 
-function createSkewer(startPoint, endPoint, absorptionData) {
+function createSkewer(name, startPoint, endPoint, absorptionData) {
 
 	var cylMaterialFront = new THREE.ShaderMaterial( {
 
@@ -493,6 +511,36 @@ function createSkewer(startPoint, endPoint, absorptionData) {
 	//scene.add( cyl2 );
 
 	//console.log(cyl);
+	
+	
+	
+	
+	if (showLabels) {
+		//Label  (x,y) = (-0.166381,0.062923) as ‘Coma cluster’ //z position??
+
+		let sprite = new THREE.TextSprite({
+			textSize: 0.25,
+			redrawInterval: 250,
+			texture: {
+				text: name,
+				fontFamily: 'Avenir, monospace, Arial, Helvetica, sans-serif',
+				textAlign: 'left',
+			},
+			material: {
+				//color: 0xffbbff,
+				color: 0xffffff,
+				fog: true,
+				transparent: true,
+				opacity: 0.9,
+			},
+		});
+		sprite.position.setX(startPoint.x).setY(startPoint.y).setZ(startPoint.z);
+		textGroup.add(sprite);
+	
+	
+		scene.add(textGroup);
+	}
+
 }
 
 function loadSkewerData(skewerFileName) {
@@ -507,6 +555,7 @@ function loadSkewerData(skewerFileName) {
 			var nameVals = skewerFileName.split("__"); 
 
 			var name = nameVals[0];
+			name = name.split("/")[2];
 			var start = nameVals[1].split("_");
 			var end = nameVals[2].split("_");;
 
@@ -535,7 +584,7 @@ function loadSkewerData(skewerFileName) {
 			//console.log(absorptionRates);
 
 
-			createSkewer(new THREE.Vector3(sX,sY,sZ), new THREE.Vector3(eX,eY,eZ), absorptionRates);
+			createSkewer(name, new THREE.Vector3(sX,sY,sZ), new THREE.Vector3(eX,eY,eZ), absorptionRates);
 
 		},
 
