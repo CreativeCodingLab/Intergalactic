@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - custom attributes [particles]</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #ffffff;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				font-weight: bold;
+
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				color: #fff;
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+				z-index:100;
+			}
+			a { color: #ff0000 }
+		</style>
+	</head>
+
+	<body>
+		<div id="container"></div>
+
+		<script src="libs/three.js"></script>
+		<script src="libs/OrbitControls.js"></script>
+		<script src="libs/THREE.TextTexture.js"></script>
+		<script src="libs/THREE.TextSprite.js"></script>
+
+
+		<script type="x-shader/x-vertex" id="vertexshader">
+
+			uniform float amplitude;
+			attribute float size;
+			attribute vec3 customColor;
+
+			varying vec3 vColor;
+
+			void main() {
+
+				vColor = customColor;
+
+				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+				gl_PointSize = size * ( 300.0 / -mvPosition.z );
+
+				gl_Position = projectionMatrix * mvPosition;
+
+			}
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+			uniform vec3 color;
+			uniform sampler2D texture;
+
+			varying vec3 vColor;
+
+			void main() {
+
+				gl_FragColor = vec4( color * vColor, 1.0 );
+				gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+
+			}
+
+		</script>
+
+
+
+		
+		<script type="x-shader/x-vertex" id="cyl_vertexshader">
+
+			uniform float amplitude;
+	
+			varying float zval;
+			varying vec2 vUv;
+
+			void main() {
+
+				vUv = uv;
+				
+				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+				zval = position.z;
+				gl_Position = projectionMatrix * mvPosition;
+
+			}
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="cyl_fragmentshader">
+
+			uniform sampler2D texture;
+			varying float zval;
+			varying vec2 vUv;
+
+			void main() {
+				gl_FragColor =  texture2D( texture, vUv );
+			}
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="cyl_fragmentshader2">
+
+			//uniform sampler2D texture;
+			varying float zval;
+
+			void main() {
+				gl_FragColor = vec4( 0.7, 0.7, 0.7, 1.0 );
+			}
+
+		</script>
+
+
+
+		<script src="js/quasar.js">
+			
+		</script>
+
+
+
+</body>
+
+</html>
