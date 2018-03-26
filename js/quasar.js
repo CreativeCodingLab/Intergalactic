@@ -4,10 +4,13 @@ var sceneReady = false;
 var renderer, scene, camera, controls;
 
 var boxOfPoints;
+var cylinderGroup, textGroup;
+var galaxies = [];
+var skewers = [];
 
 
 
-var tex1 = new THREE.TextureLoader().load( "spark.png" );
+var tex1 = new THREE.TextureLoader().load( "blur.png" );
 
 var loader = new THREE.FileLoader();
 
@@ -30,6 +33,127 @@ var skewerLinearFiltering = false;
 
 
 var currentFile = optionFile;
+
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
+
+var pointOverIdx = -1;
+var prevPointOverIdx = -1;
+
+
+//cylinderGroup.visible = false;
+
+function onKeyDown(event) {
+
+    var keyChar = String.fromCharCode(event.keyCode);
+
+    if ( keyChar  == 'S') {
+	    cylinderGroup.visible = !cylinderGroup.visible;
+
+    } else if ( keyChar  == 'T') {
+	    textGroup.visible = !textGroup.visible;
+
+    } else if ( keyChar  == 'G') {
+	    for (var g = 0; g < galaxies.length; g++) {
+		var galaxy = galaxies[g];
+		galaxy.isVisible = true;
+		boxOfPoints.geometry.attributes.isVisible.array[g] = 1.0;
+		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
+	    }
+   
+    } else if ( keyChar == 'N') {
+	    var testSkewers = [];
+	    //testSkewers.push(skewers[0]);
+	    //testSkewers.push(skewers[1]);
+	    toggleGalaxiesNearSkewers(skewers, 0.5);
+    }
+};
+
+
+
+function onMouseMove( event ) {
+
+	// calculate mouse position in normalized device coordinates
+	// (-1 to +1) for both components
+
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+	raycaster.setFromCamera( mouse, camera );
+
+	// calculate objects intersecting the picking ray
+	var intersects = raycaster.intersectObjects( scene.children );
+
+	pointOverIdx = -1;
+
+	for ( var i = 0; i < intersects.length; i++ ) {
+		var p = intersects[ i ];
+		
+		//console.log(p);
+
+		if (p.object.type == "Points" && p.distanceToRay < 0.2) {
+			//console.log(p);
+			pointOverIdx = p.index;
+			break;
+		}
+	}
+
+	
+	if (pointOverIdx >= 0 && pointOverIdx != prevPointOverIdx) {
+
+		var cs = boxOfPoints.geometry.attributes.isSelected.array;
+		
+		for (var p = 0; p < cs.length; p++) {
+			cs[p] = 0.0;
+		}
+	
+		cs[pointOverIdx] = 1.0;	
+
+		prevPointOverIdx = pointOverIdx;
+		
+		boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+
+		console.log(cylinderGroup);
+	
+	} 
+	
+	if (pointOverIdx < 0 && prevPointOverIdx >= 0) {
+
+		var cs = boxOfPoints.geometry.attributes.isSelected.array;
+		
+		for (var p = 0; p < cs.length; p++) {
+			cs[p] = 0.0;
+		}
+
+		prevPointOverIdx = -1;
+		boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+
+
+	}
+	
+
+
+	//intersect with skewers - not doing anything with this yet...
+	intersects = raycaster.intersectObjects( cylinderGroup.children );
+
+	for ( var i = 0; i < intersects.length; i++ ) {
+		var p = intersects[ i ];
+		
+		//console.log(p);
+
+		if ( cylinderGroup.visible == true && p.object.type == "Mesh") {
+			console.log(p);
+			//pointOverIdx = p.index;
+			break;
+		}
+	}
+
+
+
+
+
+
+}
 
 
 init();
@@ -210,12 +334,11 @@ function createDataTexture() {
 
 function processGalaxyData(data) {
 
-
-	//console.log("data length = " + data.length);
+	console.log("data length = " + data.length);
 
 	var rows = data.split("\n"); 
 
-	//console.log("splitLines length = " + rows.length);
+	console.log("splitLines length = " + rows.length);
 
 	//initialize point attributes
 
@@ -223,15 +346,21 @@ function processGalaxyData(data) {
 	//
 
 	var positions = new Float32Array( amount * 3 );
-	var colors = new Float32Array( amount * 3 );
+	var selects = new Float32Array( amount * 1 );
+	var colors = new Float32Array( amount * 1 );
+	var visibles = new Float32Array( amount * 1 );
 	var sizes = new Float32Array( amount );
 
 	var vertex = new THREE.Vector3();
 	var color = new THREE.Color( 0xffffff );
 
+	var idx = 0;
+	//AGF
+	//for ( var i = 1; i < 200; i++, idx++ ) {
+	for ( var i = 1; i < rows.length - 1; i ++, idx++ ) {
 
-	//for ( var i = 1; i < 10; i ++ ) {
-	for ( var i = 1; i < rows.length - 1; i ++ ) {
+		selects[ idx ] = 0.0;
+		visibles[ idx ] = 1.0;
 
 		var cells = rows[i].split(" ");
 
@@ -243,45 +372,53 @@ function processGalaxyData(data) {
 		vertex.x = useX * boxRadius;
 		vertex.y = useY * boxRadius;
 		vertex.z = useZ * boxRadius;
-		vertex.toArray( positions, i * 3 );
+		vertex.toArray( positions, idx * 3 );
 		
+			
 		var galaxyColor = cells[6];
-		//console.log("galaxyColor = " + galaxyColor);
 		if (galaxyColor == "red") {
-			color = new THREE.Color(galaxyRedHSL); //"hsl(0, 90%, 50%)");
-			//color = new THREE.Color("hsl(0, 90%, 50%)");
+			colors[ idx ] = 0;
 
 		} else if (galaxyColor == "blue") {
-			color = new THREE.Color(galaxyBlueHSL); //"hsl(200, 70%, 50%)");
-			//color.setRGB(0.0,1.0,0.0);
+			colors[ idx ] = 1;
+			
 		} else {
-			color.setRGB(0.0,1.0,0.0);
+			colors[ idx ] = 2;
 		}
-		color.toArray( colors, i * 3 );
+
+		
 
 		var galaxyRvir = parseFloat(cells[3]);
 		//console.log("galaxyRvir = " + galaxyRvir);
 
 		//console.log("galaxyRvirScalar = " + galaxyRvirScalar);
 
-		sizes[ i ] = galaxyRvir * galaxyRvirScalar;
+		sizes[ idx ] = galaxyRvir * galaxyRvirScalar;
 
+				
+		galaxies.push(new Galaxy(new THREE.Vector3(vertex.x, vertex.y, vertex.z), galaxyRvir, galaxyColor));
 	}
 
 
 
 	var geometry = new THREE.BufferGeometry();
 	geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
-	geometry.addAttribute( 'customColor', new THREE.BufferAttribute( colors, 3 ) );
+	geometry.addAttribute( 'customColor', new THREE.BufferAttribute( colors, 1 ) );
+	geometry.addAttribute( 'isSelected', new THREE.BufferAttribute( selects, 1 ) );
+	geometry.addAttribute( 'isVisible', new THREE.BufferAttribute( visibles, 1 ) );
+
 	geometry.addAttribute( 'size', new THREE.BufferAttribute( sizes, 1 ) );
 
+	
 
 	var material = new THREE.ShaderMaterial( {
 
 		uniforms: {
 			amplitude: { value: 1.0 },
 			color:     { value: new THREE.Color( 0xffffff ) },
-			texture:   { value: tex1 }
+			redColor:  { value: new THREE.Color(galaxyRedHSL) }, 
+			blueColor: { value: new THREE.Color(galaxyBlueHSL) }, 
+			texture:   { value: tex1 },
 		},
 		vertexShader:   document.getElementById( 'vertexshader' ).textContent,
 		fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
@@ -297,11 +434,13 @@ function processGalaxyData(data) {
 	scene.add( boxOfPoints );
 
 
+
+
 	if (showLabels) {
 		//Label  (x,y) = (-0.166381,0.062923) as ‘Coma cluster’ //z position??
 
 		let sprite = new THREE.TextSprite({
-			textSize: 1.2,
+			textSize: 0.7,
 			redrawInterval: 250,
 			texture: {
 				text: 'Coma cluster',
@@ -316,14 +455,59 @@ function processGalaxyData(data) {
 				opacity: 0.9,
 			},
 		});
-		sprite.position.setX(-0.166381 * boxRadius).setY(0.062923 * boxRadius).setZ(25);
-		scene.add(sprite);
+		sprite.position.setX(-0.166381 * boxRadius).setY(0.062923 * boxRadius).setZ(30);
+		textGroup.add(sprite);
+	
+		scene.add(textGroup);
+	}
+}
+
+
+function toggleGalaxiesNearSkewers(skewers, maxDistance) { 
+
+	//turn off all stars, then go through the selected skewers and turn on ones that < maxDistance from it 
+
+	for (var g = 0; g < galaxies.length; g++) {
+		var galaxy = galaxies[g];
+		boxOfPoints.geometry.attributes.isVisible.array[ g ] = 0.0;
+	}
+
+
+	for (var s = 0; s < skewers.length; s++) {
+		toggleGalaxiesNearSkewer(skewers[s], maxDistance);
+
 	}
 
 }
 
+function toggleGalaxiesNearSkewer(skewer, maxDistance) { 
 
-function createSkewer(startPoint, endPoint, absorptionData) {
+	var skewerLine = new THREE.Line3(skewer.startPoint, skewer.endPoint);
+	
+	for (var g = 0; g < galaxies.length; g++) {
+		var galaxy = galaxies[g];
+
+		var closestPt = new THREE.Vector3();
+		skewerLine.closestPointToPoint ( galaxy.position, true, closestPt);
+
+		var dist = closestPt.distanceTo(galaxy.position);
+		//console.log("galaxy " + galaxy.position + " is " + dist + " from skewerRay ");
+		//console.log(closestPt );
+		//console.log(galaxy.position);
+		//console.log(skewerLine);
+
+		if (dist < maxDistance) {
+			boxOfPoints.geometry.attributes.isVisible.array[ g ] = 1.0;
+		} 
+	
+		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
+	}
+}
+
+
+
+
+function createSkewer(name, startPoint, endPoint, absorptionData) {
 
 	var cylMaterialFront = new THREE.ShaderMaterial( {
 
@@ -373,13 +557,47 @@ function createSkewer(startPoint, endPoint, absorptionData) {
 	cyl2.position.copy(startPoint);
 	cyl2.lookAt(endPoint);
 
-	scene.add( cyl );
-	scene.add( cyl2 );
+	cylinderGroup.add(cyl);
+
+	//scene.add( cyl2 );
+
+	//console.log(cyl);
+
+	skewers.push( new Skewer(startPoint, endPoint) );
+		
+	
+	
+	if (showLabels) {
+		//Label  (x,y) = (-0.166381,0.062923) as ‘Coma cluster’ //z position??
+
+		let sprite = new THREE.TextSprite({
+			textSize: 0.25,
+			redrawInterval: 250,
+			texture: {
+				text: name,
+				fontFamily: 'Avenir, monospace, Arial, Helvetica, sans-serif',
+				textAlign: 'left',
+			},
+			material: {
+				//color: 0xffbbff,
+				color: 0xffffff,
+				fog: true,
+				transparent: true,
+				opacity: 0.9,
+			},
+		});
+		sprite.position.setX(startPoint.x).setY(startPoint.y).setZ(startPoint.z);
+		textGroup.add(sprite);
+	
+	
+		scene.add(textGroup);
+	}
 
 }
 
 function loadSkewerData(skewerFileName) {
 
+	
 	loader.load(
 		skewerFileName,
 
@@ -389,6 +607,7 @@ function loadSkewerData(skewerFileName) {
 			var nameVals = skewerFileName.split("__"); 
 
 			var name = nameVals[0];
+			name = name.split("/")[2];
 			var start = nameVals[1].split("_");
 			var end = nameVals[2].split("_");;
 
@@ -417,7 +636,7 @@ function loadSkewerData(skewerFileName) {
 			//console.log(absorptionRates);
 
 
-			createSkewer(new THREE.Vector3(sX,sY,sZ), new THREE.Vector3(eX,eY,eZ), absorptionRates);
+			createSkewer(name, new THREE.Vector3(sX,sY,sZ), new THREE.Vector3(eX,eY,eZ), absorptionRates);
 
 		},
 
@@ -460,11 +679,13 @@ function loadData() {
 				var rows = data.split("\n"); 
 
 				for ( var i = 1; i < rows.length - 1; i ++ ) {
-
 					loadSkewerData(rows[i]);
 				}		
 				
+				scene.add( cylinderGroup );
+				console.log(cylinderGroup);
 
+								
 				sceneReady = true;
 			}
 		},
@@ -491,6 +712,9 @@ function init() {
 	
 	scene = new THREE.Scene();
 
+	cylinderGroup = new THREE.Group();
+	textGroup = new THREE.Group();
+
 	loadData();
 
 
@@ -498,6 +722,9 @@ function init() {
 	container.appendChild( renderer.domElement );
 
 	window.addEventListener( 'resize', onWindowResize, false );
+	window.addEventListener( 'mousemove', onMouseMove, false );
+	document.addEventListener("keydown", onKeyDown, false);
+	
 
 }
 
@@ -525,6 +752,11 @@ function render() {
 	var time = Date.now() * 0.0005;
 
 	if (!sceneReady) { return; }
+
+
+	//console.log(cylinderGroup);
+
+
 
 	//var geometry = boxOfPoints.geometry;
 	//var attributes = geometry.attributes;
