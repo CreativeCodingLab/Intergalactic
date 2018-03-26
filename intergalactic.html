@@ -35,21 +35,30 @@
 		<script src="libs/THREE.TextTexture.js"></script>
 		<script src="libs/THREE.TextSprite.js"></script>
 
+		<script src="js/Galaxy.js"></script>
+		<script src="js/Skewer.js"></script>
+		<script src="js/quasar.js"></script>
+
+			
 
 		<script type="x-shader/x-vertex" id="vertexshader">
 
 			uniform float amplitude;
 			attribute float size;
 			attribute float isSelected;
+			attribute float isVisible;
 			attribute float customColor;
 
 			varying float vColor;
 			varying float vSelect;
-			
+			varying float vVisible;
+
 
 			void main() {
 
 				vSelect = isSelected;
+				vVisible = isVisible;
+
 				vColor = customColor;
 
 				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
@@ -72,14 +81,21 @@
 
 			varying float vColor;
 			varying float vSelect;
+			varying float vVisible;
+
 
 			const float border = 0.05;
 			
 			void main() {
 
 
+				
 				bool selectOn = false;
 			
+				if (vVisible > -0.1 && vVisible < 0.1) {
+					discard;	
+				} else {
+
 				if (vSelect > 0.9 && vSelect < 1.1) {
 					selectOn = true;
 				}
@@ -89,6 +105,8 @@
 				//if (selectOn) {
 				//	useColor = vec4(1.0,1.0,1.0,1.0);
 				//} else {
+
+				
 					if (vColor > -0.1 && vColor < 0.1) {
 						useColor = vec4(redColor.rgb,1.0);
 					} else if (vColor > 0.9 && vColor < 1.1) {
@@ -98,6 +116,7 @@
 					}
 				//}
 
+				
 				if (selectOn && (gl_PointCoord.x < border || gl_PointCoord.x > 1.0-border || gl_PointCoord.y < border || gl_PointCoord.y > 1.0-border)) {
 					gl_FragColor = useColor;
 				} else {
@@ -106,6 +125,7 @@
 				//vec4 backgroundColor = vec4(0.5, 0.5, 0.5, 1.0);
 				//vec4 finalColor = mix(textureColor, backgroundColor, 0.5);
 				gl_FragColor = vec4(color.rgb,1.0) * textureColor;
+				}
 				}
 			}
 
@@ -159,10 +179,7 @@
 
 
 
-		<script src="js/quasar.js">
-			
-		</script>
-
+	
 
 
 </body>

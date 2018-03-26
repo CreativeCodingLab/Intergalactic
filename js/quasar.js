@@ -5,6 +5,8 @@ var renderer, scene, camera, controls;
 
 var boxOfPoints;
 var cylinderGroup, textGroup;
+var galaxies = [];
+var skewers = [];
 
 
 
@@ -47,8 +49,23 @@ function onKeyDown(event) {
 
     if ( keyChar  == 'S') {
 	    cylinderGroup.visible = !cylinderGroup.visible;
+
     } else if ( keyChar  == 'T') {
 	    textGroup.visible = !textGroup.visible;
+
+    } else if ( keyChar  == 'G') {
+	    for (var g = 0; g < galaxies.length; g++) {
+		var galaxy = galaxies[g];
+		galaxy.isVisible = true;
+		boxOfPoints.geometry.attributes.isVisible.array[g] = 1.0;
+		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
+	    }
+   
+    } else if ( keyChar == 'N') {
+	    var testSkewers = [];
+	    //testSkewers.push(skewers[0]);
+	    //testSkewers.push(skewers[1]);
+	    toggleGalaxiesNearSkewers(skewers, 0.5);
     }
 };
 
@@ -317,7 +334,6 @@ function createDataTexture() {
 
 function processGalaxyData(data) {
 
-
 	console.log("data length = " + data.length);
 
 	var rows = data.split("\n"); 
@@ -332,14 +348,19 @@ function processGalaxyData(data) {
 	var positions = new Float32Array( amount * 3 );
 	var selects = new Float32Array( amount * 1 );
 	var colors = new Float32Array( amount * 1 );
+	var visibles = new Float32Array( amount * 1 );
 	var sizes = new Float32Array( amount );
 
 	var vertex = new THREE.Vector3();
 	var color = new THREE.Color( 0xffffff );
 
 	var idx = 0;
-	//for ( var i = 1; i < 20; i++, idx++ ) {
+	//AGF
+	//for ( var i = 1; i < 200; i++, idx++ ) {
 	for ( var i = 1; i < rows.length - 1; i ++, idx++ ) {
+
+		selects[ idx ] = 0.0;
+		visibles[ idx ] = 1.0;
 
 		var cells = rows[i].split(" ");
 
@@ -353,32 +374,19 @@ function processGalaxyData(data) {
 		vertex.z = useZ * boxRadius;
 		vertex.toArray( positions, idx * 3 );
 		
-		/*
-		var galaxyColor = cells[6];
-		//console.log("galaxyColor = " + galaxyColor);
-		if (galaxyColor == "red") {
-			color = new THREE.Color(galaxyRedHSL); //"hsl(0, 90%, 50%)");
-			//color = new THREE.Color("hsl(0, 90%, 50%)");
-
-		} else if (galaxyColor == "blue") {
-			color = new THREE.Color(galaxyBlueHSL); //"hsl(200, 70%, 50%)");
-			//color.setRGB(0.0,1.0,0.0);
-		} else {
-			color.setRGB(0.0,1.0,0.0);
-		}
-		color.toArray( colors, idx * 3 );
-		*/
-		
+			
 		var galaxyColor = cells[6];
 		if (galaxyColor == "red") {
 			colors[ idx ] = 0;
 
 		} else if (galaxyColor == "blue") {
 			colors[ idx ] = 1;
+			
 		} else {
 			colors[ idx ] = 2;
 		}
 
+		
 
 		var galaxyRvir = parseFloat(cells[3]);
 		//console.log("galaxyRvir = " + galaxyRvir);
@@ -387,7 +395,8 @@ function processGalaxyData(data) {
 
 		sizes[ idx ] = galaxyRvir * galaxyRvirScalar;
 
-		selects[ idx ] = 0.0;
+				
+		galaxies.push(new Galaxy(new THREE.Vector3(vertex.x, vertex.y, vertex.z), galaxyRvir, galaxyColor));
 	}
 
 
@@ -396,6 +405,8 @@ function processGalaxyData(data) {
 	geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
 	geometry.addAttribute( 'customColor', new THREE.BufferAttribute( colors, 1 ) );
 	geometry.addAttribute( 'isSelected', new THREE.BufferAttribute( selects, 1 ) );
+	geometry.addAttribute( 'isVisible', new THREE.BufferAttribute( visibles, 1 ) );
+
 	geometry.addAttribute( 'size', new THREE.BufferAttribute( sizes, 1 ) );
 
 	
@@ -447,13 +458,53 @@ function processGalaxyData(data) {
 		sprite.position.setX(-0.166381 * boxRadius).setY(0.062923 * boxRadius).setZ(30);
 		textGroup.add(sprite);
 	
-	
 		scene.add(textGroup);
+	}
+}
+
+
+function toggleGalaxiesNearSkewers(skewers, maxDistance) { 
+
+	//turn off all stars, then go through the selected skewers and turn on ones that < maxDistance from it 
+
+	for (var g = 0; g < galaxies.length; g++) {
+		var galaxy = galaxies[g];
+		boxOfPoints.geometry.attributes.isVisible.array[ g ] = 0.0;
 	}
 
 
+	for (var s = 0; s < skewers.length; s++) {
+		toggleGalaxiesNearSkewer(skewers[s], maxDistance);
+
+	}
 
 }
+
+function toggleGalaxiesNearSkewer(skewer, maxDistance) { 
+
+	var skewerLine = new THREE.Line3(skewer.startPoint, skewer.endPoint);
+	
+	for (var g = 0; g < galaxies.length; g++) {
+		var galaxy = galaxies[g];
+
+		var closestPt = new THREE.Vector3();
+		skewerLine.closestPointToPoint ( galaxy.position, true, closestPt);
+
+		var dist = closestPt.distanceTo(galaxy.position);
+		//console.log("galaxy " + galaxy.position + " is " + dist + " from skewerRay ");
+		//console.log(closestPt );
+		//console.log(galaxy.position);
+		//console.log(skewerLine);
+
+		if (dist < maxDistance) {
+			boxOfPoints.geometry.attributes.isVisible.array[ g ] = 1.0;
+		} 
+	
+		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
+	}
+}
+
+
 
 
 function createSkewer(name, startPoint, endPoint, absorptionData) {
@@ -511,8 +562,9 @@ function createSkewer(name, startPoint, endPoint, absorptionData) {
 	//scene.add( cyl2 );
 
 	//console.log(cyl);
-	
-	
+
+	skewers.push( new Skewer(startPoint, endPoint) );
+		
 	
 	
 	if (showLabels) {
@@ -627,7 +679,6 @@ function loadData() {
 				var rows = data.split("\n"); 
 
 				for ( var i = 1; i < rows.length - 1; i ++ ) {
-
 					loadSkewerData(rows[i]);
 				}		
 				
