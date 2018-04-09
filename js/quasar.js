@@ -809,7 +809,7 @@ function displayGui(){
 
 	galaxyFolder.open();
 	skewerFolder.open();
-	gui.open();
+	gui.close();
 }
 
 
