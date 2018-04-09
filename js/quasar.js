@@ -768,7 +768,7 @@ function displayGui(){
 
 	//Skewers Options-----
 	var skewerFolder = gui.addFolder("Skewers");
-	skewerFolder.add(guiParams, "skewerWid", 0.01, 2 ).name("Width");
+	//skewerFolder.add(guiParams, "skewerWid", 0.01, 2 ).name("Width");
 	var skewerMinAbs = skewerFolder.addColor(guiParams, "skewerAbsorMinHSL").name("Minimum Absorption");
 	var skewerMaxAbs = skewerFolder.addColor(guiParams, "skewerAbsorMaxHSL").name("Maximum Absorpiton");
 
