@@ -691,10 +691,11 @@ function loadData() {
 				scene.add( cylinderGroup );
 				console.log(cylinderGroup);
 
-								
-				sceneReady = true;
-				displayGui(); /*displays gui once the scene is ready, 
+				if(sceneReady != true){				
+					sceneReady = true;
+					displayGui(); /*displays gui once the scene is ready, 
 								this is here so that the data is read in before the gui is made*/
+				}
 			}
 		},
 
@@ -705,6 +706,134 @@ function loadData() {
 		function ( err ) {
 			console.error( 'An error happened' );
 		}
+	);
+}
+
+function recreate_SkewerIndividual(name, startPoint, endPoint, absorptionData){
+		var cylMaterialFront = new THREE.ShaderMaterial( {
+
+		uniforms: {
+			amplitude: { value: 1.0 },
+			color:     { value: new THREE.Color( 0xffffff ) },
+			texture:   { value: null } //texture gets set below
+		},
+		vertexShader:   document.getElementById( 'cyl_vertexshader' ).textContent,
+		fragmentShader: document.getElementById( 'cyl_fragmentshader' ).textContent,
+
+		//blending:       THREE.AdditiveBlending,
+		depthTest:      true,
+		transparent:    false,
+		side:		THREE.FrontSide
+	});
+
+	var cylMaterialBack = new THREE.ShaderMaterial( {
+
+		uniforms: {
+			amplitude: { value: 1.0 },
+			color:     { value: new THREE.Color( 0xffffff ) },
+		},
+		vertexShader:   document.getElementById( 'cyl_vertexshader' ).textContent,
+		fragmentShader: document.getElementById( 'cyl_fragmentshader2' ).textContent,
+
+		//blending:       THREE.AdditiveBlending,
+		depthTest:      true,
+		transparent:    false,
+		side:		THREE.BackSide
+
+	});
+
+
+	var cylLength = new THREE.Vector3().subVectors(endPoint, startPoint).length();
+	var cylGeom = new THREE.CylinderBufferGeometry(skewerWidth, skewerWidth, cylLength, 32, 1, true);
+	cylGeom.translate(0, cylLength / 2, 0);
+	cylGeom.rotateX(Math.PI / 2);
+
+	cylMaterialFront.uniforms.texture.value = createAbsorptionDataTexture(absorptionData); //**this may reset the color textures(Delete After Testing)
+	var cyl = new THREE.Mesh(cylGeom, cylMaterialFront);
+
+	cyl.position.copy(startPoint);
+	cyl.lookAt(endPoint);
+
+	var cyl2 = new THREE.Mesh(cylGeom, cylMaterialBack);
+	cyl2.position.copy(startPoint);
+	cyl2.lookAt(endPoint);
+
+	cylinderGroup.add(cyl);
+
+	//Whenever this function is called it resets the position of skewers based on the original skewerDataFiles.txt
+	//So if their positions is ever moved, it will be placed back during the call to reload_Skewers()
+	// This means that in the future if you ever move the skewers from their original position then you will 
+	// need to figure out thow to call reload_Skewers without using the skewerDataFiles.txt
+	//****Also**** In this call skewers[] is not changed, and text group is not changed
+}
+
+function reload_SkewerData(skewerFileName){
+	loader.load(
+		skewerFileName,
+
+		function ( data ) {
+
+			//console.log(" skewerFileName = " + skewerFileName);
+			var nameVals = skewerFileName.split("__"); 
+
+			var name = nameVals[0];
+			name = name.split("/")[2];
+			var start = nameVals[1].split("_");
+			var end = nameVals[2].split("_");;
+
+			var sX = parseFloat(start[0]) * boxRadius;
+			var sY = parseFloat(start[1]) * boxRadius;
+			var sZ = parseFloat(start[2]) * boxRadius;
+
+			var eX = parseFloat(end[0]) * boxRadius;
+			var eY = parseFloat(end[1]) * boxRadius;
+			var eZ = parseFloat(end[2].split(".dat")[0]) * boxRadius;
+
+			//console.log("start = " + sX + "/" + sY + "/" + sZ);
+			//console.log("end = " + eX + "/" + eY + "/" + eZ);
+
+
+			var rows = data.split("\n"); 
+
+			var absorptionRates = [];
+			for ( var i = 1; i < rows.length - 1; i ++ ) {
+
+				var cells = rows[i].split(" ");
+				absorptionRates.push( parseFloat(cells[5]) );
+			}
+
+			//console.log("ars length = " + absorptionRates.length);
+			//console.log(absorptionRates);
+
+
+			recreate_SkewerIndividual(name, new THREE.Vector3(sX,sY,sZ), new THREE.Vector3(eX,eY,eZ), absorptionRates);
+
+		},
+
+		function ( xhr ) {},
+
+		function ( err ) {console.error( 'An error happened' );}
+	);
+}
+
+function recreate_Skewers(){
+	scene.remove(cylinderGroup); // taking out all the skewers
+	cylinderGroup = null;
+	cylinderGroup = new THREE.Group(); // resetting cylinderGroup so that it is empty
+
+	loader.load(
+		skewerList,
+
+		function(data){
+			var rows = data.split("\n");
+			for(var i = 1; i < rows.length - 1; i++){
+				reload_SkewerData(rows[i]);
+			}
+
+			scene.add( cylinderGroup );
+		},
+		function( xhr ){},
+		function( err ){ console.error( 'An error happened');}
 	);
 }
 
@@ -768,7 +897,7 @@ function displayGui(){
 
 	//Skewers Options-----
 	var skewerFolder = gui.addFolder("Skewers");
-	//skewerFolder.add(guiParams, "skewerWid", 0.01, 2 ).name("Width");
+	var skewerWidthChange = skewerFolder.add(guiParams, "skewerWid", 0.01, 2).name("Width");
 	var skewerMinAbs = skewerFolder.addColor(guiParams, "skewerAbsorMinHSL").name("Minimum Absorption");
 	var skewerMaxAbs = skewerFolder.addColor(guiParams, "skewerAbsorMaxHSL").name("Maximum Absorpiton");
 
@@ -789,6 +918,15 @@ function displayGui(){
 
 
 	//Functions to update skewer parameters in the scene-------
+
+	skewerWidthChange.onChange(function(value){
+		//console.log(cylinderGroup);
+		//console.log("skewerWidthChange");
+		skewerWidth = value;
+		recreate_Skewers();
+		
+	});
+
 	skewerMinAbs.onChange(function(value){
 		//console.log(value);
 		skewerAbsorptionMinHSL = "rgb("+Math.round(value[0])+" ,"+Math.round(value[1])+" ,"+Math.round(value[2])+")";
