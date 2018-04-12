@@ -34,6 +34,7 @@ var cameraFocalPoint = new THREE.Vector3(0,0,0);
 var boxRadius = 30;
 var skewerLinearFiltering = false;
 
+var distanceFromSkewer = 0.5; // Determines a distance for toggling on and off galaxies near Skewers
 
 var currentFile = optionFile;
 
@@ -68,7 +69,7 @@ function onKeyDown(event) {
 	    var testSkewers = [];
 	    //testSkewers.push(skewers[0]);
 	    //testSkewers.push(skewers[1]);
-	    toggleGalaxiesNearSkewers(skewers, 0.5);
+	    toggleGalaxiesNearSkewers(skewers, distanceFromSkewer);
     }
 };
 
@@ -881,28 +882,56 @@ function displayGui(){
 
 	//Define gui Parameters
 	guiParams = {
+		galNearSkewer: false,
+		galDist2Skewer: distanceFromSkewer,
 		galRvirScal: galaxyRvirScalar,
 		galRedHSL: [galRed.r * 255, galRed.g * 255, galRed.b * 255],
 		galBlueHSL: [galBlue.r * 255, galBlue.g * 255, galBlue.b * 255],
 		skewerWid: skewerWidth,
 		skewerAbsorMinHSL: [skewMinHSL.r * 255, skewMinHSL.g * 255, skewMinHSL.b * 255],
 		skewerAbsorMaxHSL: [skewMaxHSL.r * 255, skewMaxHSL.g * 255, skewMaxHSL.b * 255],
+		skewersVisible: function(){cylinderGroup.visible = !cylinderGroup.visible;},
+		textVisible: function(){textGroup.visible = !textGroup.visible;},
 	}
 
 	//Galaxies Options-----
 	var galaxyFolder = gui.addFolder('Galaxies');
+	var galNearSkew =      galaxyFolder.add(guiParams, "galNearSkewer").name("Galaxies Close to Skewers");
+	var galRangeNearSkew = galaxyFolder.add(guiParams, "galDist2Skewer", 0.01, 6).name("Range From Skewer");
 	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", 0, 1000).name("Rvir Scalar");
 	var galaxyRed  = galaxyFolder.addColor(guiParams, "galRedHSL").name("Red Value");
 	var galaxyBlue = galaxyFolder.addColor(guiParams, "galBlueHSL").name("Blue Value");
 
 	//Skewers Options-----
 	var skewerFolder = gui.addFolder("Skewers");
+	var skewerVis = skewerFolder.add(guiParams, "skewersVisible").name("Toggle Skewer Visibility");
+	var textVis =   skewerFolder.add(guiParams, "textVisible").name("Toggle Text Visibility");
 	var skewerWidthChange = skewerFolder.add(guiParams, "skewerWid", 0.0, 0.5).step(0.01).name("Width");
 	var skewerMinAbs = skewerFolder.addColor(guiParams, "skewerAbsorMinHSL").name("Minimum Absorption");
 	var skewerMaxAbs = skewerFolder.addColor(guiParams, "skewerAbsorMaxHSL").name("Maximum Absorpiton");
 
 
 	//Functions to update the galaxy parameters in the scene------
+	galNearSkew.onChange(function(value){
+		if(value){
+			toggleGalaxiesNearSkewers(skewers, distanceFromSkewer);
+		}else{
+			for (var g = 0; g < galaxies.length; g++) {
+				var galaxy = galaxies[g];
+				galaxy.isVisible = true;
+				boxOfPoints.geometry.attributes.isVisible.array[g] = 1.0;
+				boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
+	    	}
+		}
+	});
+
+	galRangeNearSkew.onChange(function(value){
+		distanceFromSkewer = value;
+		if(guiParams.galNearSkewer){
+			toggleGalaxiesNearSkewers(skewers, distanceFromSkewer);
+		}
+	});
+
 	galaxyRvirSc.onChange(function(value){
 		//console.log(value);
 		boxOfPoints.material.uniforms.galaxyRvirScalar.value = value;
@@ -919,7 +948,17 @@ function displayGui(){
 
 	//Functions to update skewer parameters in the scene-------
 
-	skewerWidthChange.onChange(function(value){
+	/*THE FUNCTIONS FOR THESE TWO OPTIONS HAS BEEN MOVED INTO THE OPTIONS
+	skewerVis.onChange(function(value){
+		cylinderGroup.visible = !cylinderGroup.visible;
+	});
+
+	textVis.onChange(function(value){ 
+		console.log(textGroup.visible);
+		textGroup.visible = !textGroup.visible;
+	});*/
+
+	skewerWidthChange.onFinishChange(function(value){
 		//console.log(cylinderGroup);
 		//console.log("skewerWidthChange");
 		skewerWidth = value;
