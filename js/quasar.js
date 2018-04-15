@@ -11,6 +11,8 @@ var skewers = [];
 var allAbsorpitonRates = []; // should be kept in same sorted order as skewers array.
 							 // aka allAbsorptionRates[i] should belong to cylinderGroup.children[i] and skewers[i]
 
+var dg,isOverControls; // used to test whether the mouse is over the dat.gui. If so the camera shouldn't move
+
 
 
 var tex1 = new THREE.TextureLoader().load( "blur.png" );
@@ -987,6 +989,21 @@ function displayGui(){
 	galaxyFolder.open();
 	skewerFolder.open();
 	gui.close();
+
+	// dg will be used to test whether the mouse is on the dat.gui menu
+	// If it is then you need to stop the orbitControls. If it's not then the camera movement should be enabled
+	dg = document.getElementsByClassName('dg')[0];
+	isOverControls = false;
+	dg.onmouseover = function(){
+		isOverControls = true;
+		controls.enabled = false;
+		controls.update();
+	}
+	dg.onmouseout = function(){
+		isOverControls = false;
+		controls.enabled = true;
+		controls.update();
+	}
 }
 
 
