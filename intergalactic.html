@@ -34,6 +34,7 @@
 		<script src="libs/OrbitControls.js"></script>
 		<script src="libs/THREE.TextTexture.js"></script>
 		<script src="libs/THREE.TextSprite.js"></script>
+		<script src="libs/dat.gui.min.js"></script>
 
 		<script src="js/Galaxy.js"></script>
 		<script src="js/Skewer.js"></script>
@@ -44,6 +45,7 @@
 		<script type="x-shader/x-vertex" id="vertexshader">
 
 			uniform float amplitude;
+			uniform float galaxyRvirScalar;
 			attribute float size;
 			attribute float isSelected;
 			attribute float isVisible;
@@ -55,6 +57,7 @@
 
 
 			void main() {
+				float sizeScaled = size * galaxyRvirScalar; // size = galaxyRvir
 
 				vSelect = isSelected;
 				vVisible = isVisible;
@@ -63,8 +66,8 @@
 
 				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 
-				gl_PointSize = size * ( 300.0 / -mvPosition.z );
-				//gl_PointSize = size * 300.0; // * ( 300.0 / -mvPosition.z );
+				gl_PointSize = sizeScaled * ( 300.0 / -mvPosition.z );
+				//gl_PointSize = sizeScaled * 300.0; // * ( 300.0 / -mvPosition.z );
 
 				gl_Position = projectionMatrix * mvPosition;
 

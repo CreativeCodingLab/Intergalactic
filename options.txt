@@ -1,10 +1,10 @@
 galaxyData=data/galaxiesInSdssSlice_cartesian_norm.dat
-galaxyRvirScalar=800
+galaxyRvirScalar=500
 galaxyRedHSL=hsl(0, 90%, 50%)
 galaxyBlueHSL=hsl(200, 70%, 50%)
 skewerData=data/qsoInSdssSlice_cartesian_norm.dat
 skewerDataFiles=skewerDataFiles.txt
-skewerWidth=0.05
+skewerWidth=0.04
 skewerAbsorptionMinHSL=hsl(100, 90%, 50%)
 skewerAbsorptionMaxHSL=hsl(280, 90%, 60%)
 skewerLinearFiltering=false

@@ -2,11 +2,14 @@
 var sceneReady = false;
 
 var renderer, scene, camera, controls;
+var gui, guiParams;
 
 var boxOfPoints;
 var cylinderGroup, textGroup;
 var galaxies = [];
 var skewers = [];
+var allAbsorpitonRates = []; // should be kept in same sorted order as skewers array.
+							 // aka allAbsorptionRates[i] should belong to cylinderGroup.children[i] and skewers[i]
 
 
 
@@ -393,7 +396,7 @@ function processGalaxyData(data) {
 
 		//console.log("galaxyRvirScalar = " + galaxyRvirScalar);
 
-		sizes[ idx ] = galaxyRvir * galaxyRvirScalar;
+		sizes[ idx ] = galaxyRvir; // * galaxyRvirScalar; moved this to the uniforms in the shaderMaterial, multiplication now happens in the vertex shader
 
 				
 		galaxies.push(new Galaxy(new THREE.Vector3(vertex.x, vertex.y, vertex.z), galaxyRvir, galaxyColor));
@@ -419,6 +422,7 @@ function processGalaxyData(data) {
 			redColor:  { value: new THREE.Color(galaxyRedHSL) }, 
 			blueColor: { value: new THREE.Color(galaxyBlueHSL) }, 
 			texture:   { value: tex1 },
+			galaxyRvirScalar: {value: galaxyRvirScalar}, // multiplication with galaxy Rvir now happens in the vertex shader
 		},
 		vertexShader:   document.getElementById( 'vertexshader' ).textContent,
 		fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
@@ -632,6 +636,8 @@ function loadSkewerData(skewerFileName) {
 				absorptionRates.push( parseFloat(cells[5]) );
 			}
 
+			allAbsorpitonRates.push(absorptionRates); //Saves the absorption rates for each skewer
+
 			//console.log("ars length = " + absorptionRates.length);
 			//console.log(absorptionRates);
 
@@ -687,6 +693,8 @@ function loadData() {
 
 								
 				sceneReady = true;
+				displayGui(); /*displays gui once the scene is ready, 
+								this is here so that the data is read in before the gui is made*/
 			}
 		},
 
@@ -716,6 +724,9 @@ function init() {
 	textGroup = new THREE.Group();
 
 	loadData();
+	//displayGui(); This was moved inside of loadData()
+	//              For some reason skewerWidth goes back to 0.06
+	//              when not inside of loadData()
 
 
 	var container = document.getElementById( 'container' );
@@ -726,6 +737,79 @@ function init() {
 	document.addEventListener("keydown", onKeyDown, false);
 	
 
+}
+
+//Creates a gui using the dat.gui library
+function displayGui(){
+	gui = new dat.GUI( {width: 350} );
+
+	//Get the color from the global variables
+	//I make use of the fact that THREE.Color can switch between rgb and hsl
+	var galRed = new THREE.Color(galaxyRedHSL);
+	var galBlue = new THREE.Color(galaxyBlueHSL);
+	var skewMinHSL = new THREE.Color(skewerAbsorptionMinHSL);
+	var skewMaxHSL = new THREE.Color(skewerAbsorptionMaxHSL);
+
+	//Define gui Parameters
+	guiParams = {
+		galRvirScal: galaxyRvirScalar,
+		galRedHSL: [galRed.r * 255, galRed.g * 255, galRed.b * 255],
+		galBlueHSL: [galBlue.r * 255, galBlue.g * 255, galBlue.b * 255],
+		skewerWid: skewerWidth,
+		skewerAbsorMinHSL: [skewMinHSL.r * 255, skewMinHSL.g * 255, skewMinHSL.b * 255],
+		skewerAbsorMaxHSL: [skewMaxHSL.r * 255, skewMaxHSL.g * 255, skewMaxHSL.b * 255],
+	}
+
+	//Galaxies Options-----
+	var galaxyFolder = gui.addFolder('Galaxies');
+	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", 0, 1000).name("Rvir Scalar");
+	var galaxyRed  = galaxyFolder.addColor(guiParams, "galRedHSL").name("Red Value");
+	var galaxyBlue = galaxyFolder.addColor(guiParams, "galBlueHSL").name("Blue Value");
+
+	//Skewers Options-----
+	var skewerFolder = gui.addFolder("Skewers");
+	//skewerFolder.add(guiParams, "skewerWid", 0.01, 2 ).name("Width");
+	var skewerMinAbs = skewerFolder.addColor(guiParams, "skewerAbsorMinHSL").name("Minimum Absorption");
+	var skewerMaxAbs = skewerFolder.addColor(guiParams, "skewerAbsorMaxHSL").name("Maximum Absorpiton");
+
+
+	//Functions to update the galaxy parameters in the scene------
+	galaxyRvirSc.onChange(function(value){
+		//console.log(value);
+		boxOfPoints.material.uniforms.galaxyRvirScalar.value = value;
+	});
+
+	galaxyRed.onChange(function(value){
+		boxOfPoints.material.uniforms.redColor.value = new THREE.Color(value[0]/255, value[1]/255, value[2]/255);
+	});
+
+	galaxyBlue.onChange(function(value){
+		boxOfPoints.material.uniforms.blueColor.value = new THREE.Color(value[0]/255, value[1]/255, value[2]/255);
+	});
+
+
+	//Functions to update skewer parameters in the scene-------
+	skewerMinAbs.onChange(function(value){
+		//console.log(value);
+		skewerAbsorptionMinHSL = "rgb("+Math.round(value[0])+" ,"+Math.round(value[1])+" ,"+Math.round(value[2])+")";
+		for(var i = 0; i< cylinderGroup.children.length; i++){
+			cylinderGroup.children[i].material.uniforms.texture.value = createAbsorptionDataTexture(allAbsorpitonRates[i]);
+		}
+	});
+
+	skewerMaxAbs.onChange(function(value){
+		skewerAbsorptionMaxHSL = "rgb("+Math.round(value[0])+", "+Math.round(value[1])+", "+Math.round(value[2])+")";
+		//console.log(skewerAbsorptionMaxHSL);
+		for(var i = 0; i< cylinderGroup.children.length; i++){
+			cylinderGroup.children[i].material.uniforms.texture.value = createAbsorptionDataTexture(allAbsorpitonRates[i]);
+		}
+	});
+
+
+
+	galaxyFolder.open();
+	skewerFolder.open();
+	gui.close();
 }
 
 
