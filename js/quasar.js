@@ -1,5 +1,6 @@
 
 var sceneReady = false;
+var container;
 
 var renderer, scene, camera, controls;
 var gui, guiParams;
@@ -8,8 +9,9 @@ var boxOfPoints;
 var cylinderGroup, textGroup;
 var galaxies = [];
 var skewers = [];
-var allAbsorpitonRates = []; // should be kept in same sorted order as skewers array.
+var allAbsorptionRates = []; // should be kept in same sorted order as skewers array.
 							 // aka allAbsorptionRates[i] should belong to cylinderGroup.children[i] and skewers[i]
+var allFluxNormRates = []; // same properties as allAbsorptionRates
 
 var dg,isOverControls; // used to test whether the mouse is over the dat.gui. If so the camera shouldn't move
 
@@ -163,6 +165,7 @@ function onMouseMove( event ) {
 
 
 init();
+resizeCanvasToDisplaySize(true);
 animate();
 
 
@@ -611,6 +614,9 @@ function loadSkewerData(skewerFileName) {
 		function ( data ) {
 
 			//console.log(" skewerFileName = " + skewerFileName);
+
+			// Splitting the skewerFileName to get the 
+			// skewer name, start position(xyz), and end position(xyz)
 			var nameVals = skewerFileName.split("__"); 
 
 			var name = nameVals[0];
@@ -628,18 +634,23 @@ function loadSkewerData(skewerFileName) {
 
 			//console.log("start = " + sX + "/" + sY + "/" + sZ);
 			//console.log("end = " + eX + "/" + eY + "/" + eZ);
-
-
+			
+			//Note that we are now splitting the data belonging to skewerFileName
 			var rows = data.split("\n"); 
 
 			var absorptionRates = [];
+			var flux_normRates = [];
 			for ( var i = 1; i < rows.length - 1; i ++ ) {
 
 				var cells = rows[i].split(" ");
-				absorptionRates.push( parseFloat(cells[5]) );
+
+				let flux_norm_rate = parseFloat(cells[5]);
+				flux_normRates.push( flux_norm_rate );
+				absorptionRates.push( 1 - flux_norm_rate );
 			}
 
-			allAbsorpitonRates.push(absorptionRates); //Saves the absorption rates for each skewer
+			allAbsorptionRates.push(absorptionRates); //Saves the absorption rates for each skewer
+			allFluxNormRates.push(flux_normRates); // Saves the flux_norm rates for each skewer
 
 			//console.log("ars length = " + absorptionRates.length);
 			//console.log(absorptionRates);
@@ -670,7 +681,7 @@ function loadData() {
 		function ( data ) {
 			if (currentFile == optionFile) {
 				console.log("option data = \n" + data);
-				processOptions(data);
+				processOptions(data); // redefines some initial variables based on options.txt
 				currentFile = galaxyFile;
 				loadData();
 				
@@ -842,13 +853,15 @@ function recreate_Skewers(){
 
 function init() {
 
-	renderer = new THREE.WebGLRenderer();
+	/*renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio( window.devicePixelRatio );
-	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.setSize( window.innerWidth, window.innerHeight );*/
+	renderer = new THREE.WebGLRenderer({canvas: document.querySelector("canvas")});
 
-	camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
+	//camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
+	camera = new THREE.PerspectiveCamera( 60, 1, 1, 10000 );
 	camera.position.z = 50;
-	controls = new THREE.OrbitControls( camera );
+	controls = new THREE.OrbitControls( camera , document.querySelector("canvas")); // second parameter limits controls to the canvas element
 	
 	scene = new THREE.Scene();
 
@@ -856,15 +869,16 @@ function init() {
 	textGroup = new THREE.Group();
 
 	loadData();
-	//displayGui(); This was moved inside of loadData()
-	//              For some reason skewerWidth goes back to 0.06
-	//              when not inside of loadData()
+	/*displayGui(); This was moved inside of loadData()
+	             For some reason skewerWidth goes back to 0.06
+	             when not inside of loadData() */
 
 
-	var container = document.getElementById( 'container' );
-	container.appendChild( renderer.domElement );
+	/*container = document.getElementById( 'container' );
+	//renderer.setSize($(container).width(), $(container).height());
+	container.appendChild( renderer.domElement );*/
 
-	window.addEventListener( 'resize', onWindowResize, false );
+	//window.addEventListener( 'resize', onWindowResize, false );
 	window.addEventListener( 'mousemove', onMouseMove, false );
 	document.addEventListener("keydown", onKeyDown, false);
 	
@@ -972,7 +986,7 @@ function displayGui(){
 		//console.log(value);
 		skewerAbsorptionMinHSL = "rgb("+Math.round(value[0])+" ,"+Math.round(value[1])+" ,"+Math.round(value[2])+")";
 		for(var i = 0; i< cylinderGroup.children.length; i++){
-			cylinderGroup.children[i].material.uniforms.texture.value = createAbsorptionDataTexture(allAbsorpitonRates[i]);
+			cylinderGroup.children[i].material.uniforms.texture.value = createAbsorptionDataTexture(allAbsorptionRates[i]);
 		}
 	});
 
@@ -980,7 +994,7 @@ function displayGui(){
 		skewerAbsorptionMaxHSL = "rgb("+Math.round(value[0])+", "+Math.round(value[1])+", "+Math.round(value[2])+")";
 		//console.log(skewerAbsorptionMaxHSL);
 		for(var i = 0; i< cylinderGroup.children.length; i++){
-			cylinderGroup.children[i].material.uniforms.texture.value = createAbsorptionDataTexture(allAbsorpitonRates[i]);
+			cylinderGroup.children[i].material.uniforms.texture.value = createAbsorptionDataTexture(allAbsorptionRates[i]);
 		}
 	});
 
@@ -1006,7 +1020,20 @@ function displayGui(){
 	}
 }
 
+// called inside of render(). Used to resize the content to fit its div container
+function resizeCanvasToDisplaySize(force) {
+	const canvas = renderer.domElement;
+  	const width = canvas.clientWidth;
+  	const height = canvas.clientHeight;
+  	if (force || canvas.width !== width ||canvas.height !== height) {
+    	// you must pass false here or three.js sadly fights the browser
+    	renderer.setSize(width, height, false);
+    	camera.aspect = width / height;
+    	camera.updateProjectionMatrix();
 
+    	// set render target sizes here
+  }
+}
 
 function onWindowResize() {
 
@@ -1014,6 +1041,7 @@ function onWindowResize() {
 	camera.updateProjectionMatrix();
 
 	renderer.setSize( window.innerWidth, window.innerHeight );
+	//renderer.setSize($(container).width(), $(container).height());
 
 }
 
@@ -1045,7 +1073,9 @@ function render() {
 		//attributes.size.array[ i ] = 14 + 13 * Math.sin( 0.1 * i + time );
 	//}
 	//attributes.size.needsUpdate = true;
-
+	
+	resizeCanvasToDisplaySize();
+	//controls.update();
 	renderer.render( scene, camera );
 
 }
