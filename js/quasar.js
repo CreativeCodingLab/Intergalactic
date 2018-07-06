@@ -622,7 +622,7 @@ function loadSkewerData(skewerFileName) {
 			var name = nameVals[0];
 			name = name.split("/")[2];
 			var start = nameVals[1].split("_");
-			var end = nameVals[2].split("_");;
+			var end = nameVals[2].split("_");
 
 			var sX = parseFloat(start[0]) * boxRadius;
 			var sY = parseFloat(start[1]) * boxRadius;
