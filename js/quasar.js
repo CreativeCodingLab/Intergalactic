@@ -166,6 +166,7 @@ function onMouseMove( event ) {
 
 init();
 resizeCanvasToDisplaySize(true);
+createD3Menu();
 animate();
 
 
