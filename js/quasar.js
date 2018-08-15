@@ -149,7 +149,7 @@ function onMouseMove( event ) {
 		console.log(skewers[cylOverIdx])
 
 		// show skewer details
-		let data = skewers[cylOverIdx].absorptionData // allAbsorptionRates[cylOverIdx]
+		let d = skewers[cylOverIdx] // allAbsorptionRates[cylOverIdx]
 
 		let x = d3.scaleLinear().domain([.5, .9]).range([0, graphWidth]),
 			y = d3.scaleLinear().domain([0, 2]).range([graphHeight, 0])
@@ -170,13 +170,16 @@ function onMouseMove( event ) {
 				.attr('stroke', 'none')
 				.attr('fill', 'white')
 
+		graph.select('.title')
+			.text(d.name)
+
 		// manually refresh plot
-		console.log(data)
+		// console.log(data))
 
 		graph.select('.pen').remove()
 		graph.append('path')
 			.attr('class', 'pen')
-			.attr('d', pen(data)) // single 'datum'
+			.attr('d', pen(d.absorptionData)) // single 'datum'
 			.attr('stroke', 'white')
 			.attr('fill', 'none')
 	}
@@ -195,6 +198,11 @@ function initGraph() {
 	graph.append('g').attr('class', 'yaxis')
 		.attr('stroke', 'white')
 	
+	graph.append('text').attr('class', 'title')
+		.attr('transform', 'translate('+graphWidth/2+', 0)')
+		.attr('text-anchor', 'middle')
+		.attr('fill', 'white')
+
 	return graph
 }
 
