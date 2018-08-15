@@ -8,7 +8,7 @@ var boxOfPoints;
 var cylinderGroup, textGroup;
 var galaxies = [];
 var skewers = [];
-var allAbsorptionRates = []; // should be kept in same sorted order as skewers array.
+// var allAbsorptionRates = []; // should be kept in same sorted order as skewers array.
 							 // aka allAbsorptionRates[i] should belong to cylinderGroup.children[i] and skewers[i]
 
 var dg,isOverControls; // used to test whether the mouse is over the dat.gui. If so the camera shouldn't move
@@ -137,8 +137,9 @@ function onMouseMove( event ) {
 		var p = intersects[ i ];
 
 		if ( cylinderGroup.visible == true && p.object.type == "Mesh") {
-			// console.log(p);
-			cylOverIdx = cylinderGroup.children.indexOf(p.object) // recompute index to recover model object (FIX)
+			cylOverIdx = cylinderGroup.children.indexOf(p.object) // recompute index to recover model object
+			console.log('skewers['+cylOverIdx+']', p);
+
 			// cylOverLoc = p.point; // EXPECT offset by radius from actual position along skewer.
 			break;
 		}
@@ -146,10 +147,9 @@ function onMouseMove( event ) {
 
 	if (cylOverIdx > -1 && cylOverIdx != prevCylOverIdx) {
 		console.log(skewers[cylOverIdx])
-		// console.log(allAbsorptionRates[cylOverIdx])
 
 		// show skewer details
-		let data = allAbsorptionRates[cylOverIdx]
+		let data = skewers[cylOverIdx].absorptionData // allAbsorptionRates[cylOverIdx]
 
 		let x = d3.scaleLinear().domain([.5, .9]).range([0, graphWidth]),
 			y = d3.scaleLinear().domain([0, 2]).range([graphHeight, 0])
@@ -171,6 +171,8 @@ function onMouseMove( event ) {
 				.attr('fill', 'white')
 
 		// manually refresh plot
+		console.log(data)
+
 		graph.select('.pen').remove()
 		graph.append('path')
 			.attr('class', 'pen')
@@ -196,7 +198,7 @@ function initGraph() {
 	return graph
 }
 
-let graphWidth = 1200, graphHeight = 200 // FIXME: ew, globals
+let graphWidth = window.innerWidth - 50, graphHeight = 200 // FIXME: ew, globals
 let graph = initGraph()
 
 
@@ -574,13 +576,13 @@ function plotSkewer(name, startPoint, endPoint, absorptionData){
 	cylinderGroup.add(cyl);
 	// console.log(cyl);	
 
-	//scene.add( cyl2 );
+	scene.add( cyl2 ); // DO NOT add to cylinderGroup - won't be aligned with skewers data.
 }
 
 function createSkewer(name, startPoint, endPoint, absorptionData) {
 
-	skewers.push( new Skewer(name, startPoint, endPoint) ); // register to model
-	console.log(name, startPoint)
+	skewers.push( new Skewer(name, startPoint, endPoint, absorptionData) ); // register to model
+	console.log(name, absorptionData[0])
 
 	plotSkewer(...arguments)
 	
@@ -640,7 +642,7 @@ function onLoadSkewer(filename, factory) {
 			absorptionRates.push( ret );
 		}
 
-		allAbsorptionRates.push(absorptionRates); //Saves the absorption rates for each skewer
+		// allAbsorptionRates.push(absorptionRates); //Saves the absorption rates for each skewer
 		//console.log("ars length = " + absorptionRates.length);
 		//console.log(absorptionRates);
 
@@ -859,7 +861,7 @@ function displayGui(){
 		
 	});
 
-	skewerMinAbs.onChange(function(value){
+	/* skewerMinAbs.onChange(function(value){
 		//console.log(value);
 		skewerAbsorptionMinHSL = "rgb("+Math.round(value[0])+" ,"+Math.round(value[1])+" ,"+Math.round(value[2])+")";
 		for(var i = 0; i< cylinderGroup.children.length; i++){
@@ -873,7 +875,7 @@ function displayGui(){
 		for(var i = 0; i< cylinderGroup.children.length; i++){
 			cylinderGroup.children[i].material.uniforms.texture.value = createAbsorptionDataTexture(allAbsorptionRates[i]);
 		}
-	});
+	}); */
 
 
 
