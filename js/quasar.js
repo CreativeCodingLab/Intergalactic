@@ -138,7 +138,7 @@ function onMouseMove( event ) {
 
 		if ( cylinderGroup.visible == true && p.object.type == "Mesh") {
 			cylOverIdx = cylinderGroup.children.indexOf(p.object) // recompute index to recover model object
-			console.log('skewers['+cylOverIdx+']', p);
+			// console.log('skewers['+cylOverIdx+']', p);
 
 			// cylOverLoc = p.point; // EXPECT offset by radius from actual position along skewer.
 			break;
@@ -146,46 +146,50 @@ function onMouseMove( event ) {
 	}
 
 	if (cylOverIdx > -1 && cylOverIdx != prevCylOverIdx) {
-		console.log(skewers[cylOverIdx])
-
 		// show skewer details
-		let d = skewers[cylOverIdx] // allAbsorptionRates[cylOverIdx]
+		console.log(skewers[cylOverIdx]);
+		let u = skewers[cylOverIdx]; // allAbsorptionRates[cylOverIdx]
+
+		spectra = d3.entries(u.absorptionData);
 
 		let x = d3.scaleLinear().domain([.5, .9]).range([0, graphWidth]),
-			y = d3.scaleLinear().domain([0, 2]).range([graphHeight, 0])
+			y = d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
 			// TODO: attach dat.gui
 
-		let pen = d3.line().x((d) => x(d.distScaled)).y((d) => y(d.fluxNorm))
+		let pen = d3.line().x((d) => x(d.distScaled)).y((d) => y(d.fluxNorm));
 		// let graph = d3.select('#graph').select('g')
 
-		// fresh axes
+		// fresh axes rendering x(), y()
 		graph.select('.xaxis')
 			.call(d3.axisBottom(x))
 			.selectAll('text')
 				.attr('stroke', 'none')
-				.attr('fill', 'white')
+				.attr('fill', 'white');
 		graph.select('.yaxis')
 			.call(d3.axisLeft(y))
 			.selectAll('text')
 				.attr('stroke', 'none')
-				.attr('fill', 'white')
+				.attr('fill', 'white');
 
 		graph.select('.title')
-			.text(d.name)
+			.text(u.name);
 
-		// manually refresh plot
-		// console.log(data))
+		// update plot with all absorption data for this skewer
 
-		graph.select('.pen').remove()
-		graph.append('path')
-			.attr('class', 'pen')
-			.attr('d', pen(d.absorptionData)) // single 'datum'
-			.attr('stroke', 'white')
-			.attr('fill', 'none')
+		graph.selectAll('.pen').remove()
+		for (let i = 0; i < spectra.length; ++i)
+			graph.append('path')
+				.attr('class', 'pen')
+				.attr('d', pen(spectra[i].value) )
+				.attr('stroke', spectra[i].key == 'HI' ? 'white' : 'gray' )
+				.attr('fill', 'none');
+
+				// ({value: v}) => pen(v)
+				// ({key: k}) => k == 'HI' ? 'white' : k == 'CIV' ? 'blue' : 'red'
 	}
 }
 
-function initGraph() {
+function initGraph(data) {
 	let graph = d3.select('#graph')
 					.attr("width", graphWidth + 50)
 					.attr("height", graphHeight + 50)
@@ -203,12 +207,15 @@ function initGraph() {
 		.attr('text-anchor', 'middle')
 		.attr('fill', 'white')
 
-	return graph
+	let trace = graph.selectAll('.pen')
+		 			 .data(data) // FIXME
+	return [graph, trace]
 }
 
-let graphWidth = window.innerWidth - 50, graphHeight = 200 // FIXME: ew, globals
-let graph = initGraph()
+let spectra = [];
 
+let graphWidth = window.innerWidth - 50, graphHeight = 200; // FIXME: ew, globals
+let [graph, trace] = initGraph(spectra);
 
 init();
 animate();
@@ -523,7 +530,7 @@ function toggleGalaxiesNearSkewer(skewer, maxDistance) {
 
 
 
-function plotSkewer(name, startPoint, endPoint, absorptionData){
+function plotSkewer(name, startPoint, endPoint){
 	// was 'recreate_SkewerIndividual'
 
 	//Whenever this function is called it resets the position of skewers based on the original skewerDataFiles.txt
@@ -587,12 +594,19 @@ function plotSkewer(name, startPoint, endPoint, absorptionData){
 	scene.add( cyl2 ); // DO NOT add to cylinderGroup - won't be aligned with skewers data.
 }
 
-function createSkewer(name, startPoint, endPoint, absorptionData) {
+function createSkewer(name, startPoint, endPoint, spectrum, data) {
 
-	skewers.push( new Skewer(name, startPoint, endPoint, absorptionData) ); // register to model
-	console.log(name, absorptionData[0])
+	// TODO: load each skewer in constant time using a properly indexed data structure
+	let ret = skewers.find((u) => u.name == name)
+	if (!ret) {
+		ret = new Skewer(name, startPoint, endPoint)
+		skewers.push( ret ); // register to model
 
-	plotSkewer(...arguments)
+		plotSkewer(...arguments) // FIXME: generate absorption texture(s)
+	}
+	ret.attach(spectrum, data) // FIXME: naive merge doesn't update startPoint, endPoint
+
+	console.log(name, data[0])
 	
 	if (showLabels) {
 		//Label  (x,y) = (-0.166381,0.062923) as ‘Coma cluster’ //z position??
@@ -616,16 +630,18 @@ function createSkewer(name, startPoint, endPoint, absorptionData) {
 		sprite.position.setX(startPoint.x).setY(startPoint.y).setZ(startPoint.z);
 		textGroup.add(sprite);
 	}
-
 }
 
-function onLoadSkewer(filename, factory) {
+function onLoadSkewer(relpath, factory) {
 	return (data) => {
 		// console.log(" skewerFileName = " + skewerFileName);
-		var nameVals = filename.split("__"); 
+		var nameVals = relpath.split("__");
+		// e.g. data/spectra_HI_partial_norm/2MASS-J13250381+2717189__-0.134_0.031_0.511__-0.22_0.052_0.841.dat
 
-		var name = nameVals[0];
-		name = name.split("/")[2];
+		var path = nameVals[0].split('/');
+		var spectra = path[1].split('_')[1];
+
+		var name = path[2];
 		var start = nameVals[1].split("_");
 		var end = nameVals[2].split("_");
 
@@ -641,20 +657,20 @@ function onLoadSkewer(filename, factory) {
 		//console.log("end = " + eX + "/" + eY + "/" + eZ);
 
 		var rows = data.split("\n"); 
-		var absorptionRates = [];
+		var rates = [];
 		for ( var i = 1; i < rows.length - 1; i ++ ) {
 
-			var cells = rows[i].split(" "); // FIXME: brittle
+			var cells = rows[i].split(" "); // FIXME: brittle column names
 			var ret = {'distScaled': parseFloat(cells[3]),
 					   'fluxNorm': parseFloat(cells[5]),}
-			absorptionRates.push( ret );
+			rates.push( ret );
 		}
 
 		// allAbsorptionRates.push(absorptionRates); //Saves the absorption rates for each skewer
 		//console.log("ars length = " + absorptionRates.length);
 		//console.log(absorptionRates);
 
-		factory(name, new THREE.Vector3(sX,sY,sZ), new THREE.Vector3(eX,eY,eZ), absorptionRates);
+		factory(name, new THREE.Vector3(sX,sY,sZ), new THREE.Vector3(eX,eY,eZ), spectra, rates);
 	}
 }
 
