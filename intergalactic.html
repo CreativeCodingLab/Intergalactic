@@ -16,6 +16,17 @@
 				margin: 0px;
 				overflow: hidden;
 			}
+			#dat-gui {
+				float: left;
+			}
+			#details {
+				width: 90%;
+				float: right;
+				position: fixed;
+				top: 3px;
+
+			}
+
 			#info {
 				color: #fff;
 				position: absolute;
@@ -30,10 +41,11 @@
 	<body>
 		<div id="container"></div>
 
-		<div id="details" style="width: 350px; float: left; position: fixed; top: 0">
-			<p>Details</p>
-			<img id="galaxy-thumbnail"></img>
-			<svg id="graph"></svg>
+		<div class="dg ac">
+			<div id="details">
+				<svg id="graph"></svg>
+				<img id="galaxy-thumbnail" />
+			</div>
 		</div>
 
 		<script src="libs/three.js"></script>

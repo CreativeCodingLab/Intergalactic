@@ -19,23 +19,25 @@ var loader = new THREE.FileLoader();
 
 //defaults - values can be changed here, or loaded in from options.txt
 var optionFile = 'options.txt';
-var galaxyFile = 'data/galaxyDataFile'; //hardcode here if not indicated in options.txt
+var currentFile = optionFile;
+
+/* var galaxyFile = 'data/galaxyDataFile'; //hardcode here if not indicated in options.txt
 var skewerFile = 'data/qsoInSdssSlice_partial_cartesian_norm.dat'; //hardcode here if not indicated in options.txt
 var skewerList = 'skewerDataFiles.txt'; //hardcode here if not indicated in options.txt
-var galaxyRvirScalar = 500.0;
+var galaxyRvirScalar = 0.5;
 var skewerWidth = 0.06;
 var galaxyRedHSL = "hsl(0, 90%, 50%)";
 var galaxyBlueHSL = "hsl(200, 70%, 50%)";
 var skewerAbsorptionMinHSL = "hsl(100, 90%, 50%)";
 var skewerAbsorptionMaxHSL = "hsl(280, 90%, 60%)";
 var showLabels = true;
-var cameraFocalPoint = new THREE.Vector3(0,0,0);
+var cameraFocalPoint = new THREE.Vector3(0,0,0); */
+
 var boxRadius = 30;
 var skewerLinearFiltering = false;
 
-var distanceFromSkewer = 0.5; // Determines a distance for toggling on and off galaxies near Skewers
-
-var currentFile = optionFile;
+var distanceFromSkewer = 0.5;
+	// Determines a distance for toggling on and off galaxies near Skewers
 
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
@@ -44,6 +46,14 @@ var pointOverIdx = -1;
 var prevPointOverIdx = -1;
 var cylOverIdx = -1;
 var prevCylOverIdx = -1;
+
+
+let graphWidth = window.innerWidth - 50, graphHeight = 200; // FIXME: ew, globals
+let graph = initGraph();
+
+let xScale = d3.scaleLinear().domain([.9, .5]).range([0, graphWidth]),
+	yScale = d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
+// TODO: attach dat.gui
 
 //cylinderGroup.visible = false;
 
@@ -146,50 +156,80 @@ function onMouseMove( event ) {
 	}
 
 	if (cylOverIdx > -1 && cylOverIdx != prevCylOverIdx) {
-		// show skewer details
-		console.log(skewers[cylOverIdx]);
-		let u = skewers[cylOverIdx]; // allAbsorptionRates[cylOverIdx]
-
-		spectra = d3.entries(u.absorptionData);
-
-		let x = d3.scaleLinear().domain([.5, .9]).range([0, graphWidth]),
-			y = d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
-			// TODO: attach dat.gui
-
-		let pen = d3.line().x((d) => x(d.distScaled)).y((d) => y(d.fluxNorm));
-		// let graph = d3.select('#graph').select('g')
-
-		// fresh axes rendering x(), y()
-		graph.select('.xaxis')
-			.call(d3.axisBottom(x))
-			.selectAll('text')
-				.attr('stroke', 'none')
-				.attr('fill', 'white');
-		graph.select('.yaxis')
-			.call(d3.axisLeft(y))
-			.selectAll('text')
-				.attr('stroke', 'none')
-				.attr('fill', 'white');
-
-		graph.select('.title')
-			.text(u.name);
-
-		// update plot with all absorption data for this skewer
-
-		graph.selectAll('.pen').remove()
-		for (let i = 0; i < spectra.length; ++i)
-			graph.append('path')
-				.attr('class', 'pen')
-				.attr('d', pen(spectra[i].value) )
-				.attr('stroke', spectra[i].key == 'HI' ? 'white' : 'gray' )
-				.attr('fill', 'none');
-
-				// ({value: v}) => pen(v)
-				// ({key: k}) => k == 'HI' ? 'white' : k == 'CIV' ? 'blue' : 'red'
+		plotSkewerSpectra();
+		plotSkewerNeighbors();
 	}
 }
 
-function initGraph(data) {
+function plotSkewerSpectra() {
+	let u = skewers[cylOverIdx];
+	let spectra = d3.entries(u.absorptionData);
+
+	let x = xScale, y = yScale;
+	let pen = d3.line()
+				.x((d) => x(d.distScaled))
+				.y((d) => y(d.fluxNorm));
+	// let graph = d3.select('#graph').select('g')
+
+	// fresh axes rendering x(), y()
+	graph.select('.xaxis')
+		.call(d3.axisBottom(x))
+		.selectAll('text')
+			.attr('stroke', 'none')
+			.attr('fill', 'white');
+	graph.select('.yaxis')
+		.call(d3.axisLeft(y))
+		.selectAll('text')
+			.attr('stroke', 'none')
+			.attr('fill', 'white');
+
+	graph.select('.title')
+		.text(u.name);
+
+	// update plot with all absorption data for this skewer
+
+	graph.selectAll('.pen').remove()
+	for (let i = 0; i < spectra.length; ++i)
+		graph.append('path')
+			.attr('class', 'pen')
+			.attr('d', pen(spectra[i].value) )
+			.attr('stroke', spectra[i].key == 'HI' ? 'white' : 'gray' )
+			.attr('fill', 'none');
+
+			// ({value: v}) => pen(v)
+			// ({key: k}) => k == 'HI' ? 'white' : k == 'CIV' ? 'blue' : 'red'
+}
+
+function plotSkewerNeighbors() {
+	let u = skewers[cylOverIdx];
+	let p = perpendicularsTo(u); // FIXME: pipe from dat.gui
+
+
+	graph.selectAll('.mark').remove()
+	for (var i = 0; i < galaxies.length; i++) {0
+		let dist = p[i].distanceTo(galaxies[i].position)
+
+		if (dist < distanceFromSkewer) { // filter
+			let distAlong = p[i].z / boxRadius // map
+
+			let j = pointOverIdx // boxOfPoints and galaxies not aligned?
+			// if (j == i)
+			console.log(distAlong)
+
+			graph.append('rect')
+				.attr('class', 'mark')
+				.attr('x', xScale(distAlong))
+				.attr('y', 0) // yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
+				.attr('width', 1)
+				.attr('height', graphHeight)
+				.attr('opacity', 1 / (.01*dist + 1))
+				// TODO: fade more distant neighbors
+				.attr('fill', pointOverIdx == i ? 'red' : 'white')
+		}
+	}
+}
+
+function initGraph() {
 	let graph = d3.select('#graph')
 					.attr("width", graphWidth + 50)
 					.attr("height", graphHeight + 50)
@@ -207,15 +247,10 @@ function initGraph(data) {
 		.attr('text-anchor', 'middle')
 		.attr('fill', 'white')
 
-	let trace = graph.selectAll('.pen')
-		 			 .data(data) // FIXME
-	return [graph, trace]
+	// let trace = graph.selectAll('.pen')
+		 			 // .data(data) // FIXME
+	return graph // [graph, trace]
 }
-
-let spectra = [];
-
-let graphWidth = window.innerWidth - 50, graphHeight = 200; // FIXME: ew, globals
-let [graph, trace] = initGraph(spectra);
 
 init();
 animate();
@@ -390,10 +425,11 @@ function processGalaxyData(data) {
 		visibles[ idx ] = 1.0;
 
 		var cells = rows[i].split(" ");
+		var id = cells[0];
 
-		var useX = parseFloat(cells[0]);
-		var useY = parseFloat(cells[1]);
-		var useZ = parseFloat(cells[2]);
+		var useX = parseFloat(cells[1]);
+		var useY = parseFloat(cells[2]);
+		var useZ = parseFloat(cells[3]);
 
 		//console.log(useX + "/" + useY + "/" + useZ);
 		vertex.x = useX * boxRadius;
@@ -402,7 +438,7 @@ function processGalaxyData(data) {
 		vertex.toArray( positions, idx * 3 );
 		
 
-		var galaxyColor = cells[6];
+		var galaxyColor = cells[7];
 		if (galaxyColor.includes("red")) { // watch out for carriage returns - chrome on windows specific?
 			colors[ idx ] = 0;
 
@@ -414,15 +450,19 @@ function processGalaxyData(data) {
 		}
 		// if (i == 1) console.log(cells)
 
-		var galaxyRvir = parseFloat(cells[3]);
+		var galaxyRvir = parseFloat(cells[4]);
 		// console.log("galaxyRvir = " + galaxyRvir);
 		sizes[ idx ] = galaxyRvir; // * galaxyRvirScalar; moved this to the uniforms in the shaderMaterial, multiplication now happens in the vertex shader
 
-
-		galaxies.push(new Galaxy(new THREE.Vector3(vertex.x, vertex.y, vertex.z), galaxyRvir, galaxyColor));
-			// FIXME: data file is missing IDs aligned with galaxyImages_partial.
+		let g = new Galaxy(id, new THREE.Vector3(vertex.x, vertex.y, vertex.z), galaxyColor);
+		// TODO: read property column names
+		g.rvir = galaxyRvir;
+		g.redshift = parseFloat(cells[5]);
+		g.log_sSFR = parseFloat(cells[6]);
+		galaxies.push(g);
 	}
 	// console.log(colors);
+	console.log(sizes);
 
 	var geometry = new THREE.BufferGeometry();
 	geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
@@ -491,41 +531,43 @@ function toggleGalaxiesNearSkewers(skewers, maxDistance) {
 
 	//turn off all stars, then go through the selected skewers and turn on ones that < maxDistance from it 
 
-	for (var g = 0; g < galaxies.length; g++) {
-		var galaxy = galaxies[g];
+	for (var g = 0; g < galaxies.length; g++)
 		boxOfPoints.geometry.attributes.isVisible.array[ g ] = 0.0;
-	}
-
-
+		
 	for (var s = 0; s < skewers.length; s++) {
-		toggleGalaxiesNearSkewer(skewers[s], maxDistance);
-
+		let mask = perpendicularsTo(skewers[s])
+					.map((v,i) => v.distanceTo(galaxies[i].position)
+									<= maxDistance ? 1 : 0);
+					// TODO: refactor
+		for (var g = 0; g < galaxies.length; g++)
+			if (mask[g])
+				boxOfPoints.geometry.attributes.isVisible.array[ g ] = 1.0;
+		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
 	}
 
 }
 
-function toggleGalaxiesNearSkewer(skewer, maxDistance) { 
-
+function perpendicularsTo(skewer) { 
 	var skewerLine = new THREE.Line3(skewer.startPoint, skewer.endPoint);
-	
-	for (var g = 0; g < galaxies.length; g++) {
-		var galaxy = galaxies[g];
+	let ret = Array(galaxies.length);
+
+	for (var i = 0; i < galaxies.length; i++) {
+		var galaxy = galaxies[i];
 
 		var closestPt = new THREE.Vector3();
 		skewerLine.closestPointToPoint ( galaxy.position, true, closestPt);
 
-		var dist = closestPt.distanceTo(galaxy.position);
-		//console.log("galaxy " + galaxy.position + " is " + dist + " from skewerRay ");
+		ret[i] = closestPt;
+		// console.log("galaxy " + galaxy.position + " is " + dist + " from skewerRay ");
 		//console.log(closestPt );
 		//console.log(galaxy.position);
 		//console.log(skewerLine);
 
-		if (dist < maxDistance) {
+		/* if (dist < maxDistance) {
 			boxOfPoints.geometry.attributes.isVisible.array[ g ] = 1.0;
-		} 
-	
-		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
+		} */
 	}
+	return ret;
 }
 
 
@@ -791,6 +833,7 @@ function init() {
 //Creates a gui using the dat.gui library
 function displayGui(){
 	gui = new dat.GUI( {width: 350} );
+	gui.domElement.id = 'dat-gui';
 
 	//Get the color from the global variables
 	//I make use of the fact that THREE.Color can switch between rgb and hsl
@@ -817,7 +860,7 @@ function displayGui(){
 	var galaxyFolder = gui.addFolder('Galaxies');
 	var galNearSkew =      galaxyFolder.add(guiParams, "galNearSkewer").name("Galaxies Close to Skewers");
 	var galRangeNearSkew = galaxyFolder.add(guiParams, "galDist2Skewer", 0.01, 6).name("Range From Skewer");
-	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", 0, 1000).name("Rvir Scalar");
+	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", 0, 1).name("Rvir Scalar");
 	var galaxyRed  = galaxyFolder.addColor(guiParams, "galRedHSL").name("Red Value");
 	var galaxyBlue = galaxyFolder.addColor(guiParams, "galBlueHSL").name("Blue Value");
 
@@ -848,6 +891,7 @@ function displayGui(){
 		distanceFromSkewer = value;
 		if(guiParams.galNearSkewer){
 			toggleGalaxiesNearSkewers(skewers, distanceFromSkewer);
+			// plotSkewerNeighbors();
 		}
 	});
 
