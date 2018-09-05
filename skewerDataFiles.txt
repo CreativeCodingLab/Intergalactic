@@ -27,3 +27,9 @@ data/spectra_HI_partial_norm/SDSSJ134246.89+184443.6__-0.179_-0.042_0.496__-0.29
 data/spectra_HI_partial_norm/SDSSJ135625.55+251523.7__-0.198_0.022_0.491__-0.325_0.037_0.807.dat
 data/spectra_HI_partial_norm/SDSSJ135712.61+170444.1__-0.21_-0.052_0.483__-0.346_-0.085_0.795.dat
 data/spectra_HI_partial_norm/TON0694__-0.09_0.035_0.52__-0.147_0.058_0.856.dat
+data/spectra_CIV_partial_norm/PG1116+215__0.127_-0.025_0.513__0.209_-0.041_0.844.dat
+data/spectra_CIV_partial_norm/PG1222+216__-0.013_-0.031_0.528__-0.021_-0.052_0.869.dat
+data/spectra_CIV_partial_norm/SDSSJ105958.82+251708.8__0.162_0.016_0.504__0.266_0.027_0.829.dat
+data/spectra_CIV_partial_norm/SDSSJ133045.15+281321.4__-0.144_0.041_0.508__-0.237_0.068_0.835.dat
+data/spectra_CIV_partial_norm/SDSSJ134246.89+184443.6__-0.179_-0.042_0.496__-0.295_-0.069_0.817.dat
+data/spectra_CIV_partial_norm/SDSSJ135712.61+170444.1__-0.21_-0.052_0.483__-0.346_-0.085_0.795.dat

@@ -1,7 +1,8 @@
 class Galaxy {
-	constructor(position, rvir, color) {
+	constructor(id, position, rvir, color) {
+		this.id = id;
 		this.position = position; //THREE.Vector3
-		this.rvir = rvir; //float
+		
 		this.color = color; //string
 		this.isVisible = true;
 	}

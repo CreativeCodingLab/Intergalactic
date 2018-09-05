@@ -8,46 +8,68 @@ var boxOfPoints;
 var cylinderGroup, textGroup;
 var galaxies = [];
 var skewers = [];
-var allAbsorpitonRates = []; // should be kept in same sorted order as skewers array.
+// var allAbsorptionRates = []; // should be kept in same sorted order as skewers array.
 							 // aka allAbsorptionRates[i] should belong to cylinderGroup.children[i] and skewers[i]
 
 var dg,isOverControls; // used to test whether the mouse is over the dat.gui. If so the camera shouldn't move
 
-
-
 var tex1 = new THREE.TextureLoader().load( "blur.png" );
-
 var loader = new THREE.FileLoader();
 
 
 //defaults - values can be changed here, or loaded in from options.txt
 var optionFile = 'options.txt';
-var galaxyFile = 'data/galaxyDataFile'; //hardcode here if not indicated in options.txt
+var currentFile = optionFile;
+
+/* var galaxyFile = 'data/galaxyDataFile'; //hardcode here if not indicated in options.txt
 var skewerFile = 'data/qsoInSdssSlice_partial_cartesian_norm.dat'; //hardcode here if not indicated in options.txt
 var skewerList = 'skewerDataFiles.txt'; //hardcode here if not indicated in options.txt
-var galaxyRvirScalar = 500.0;
+var galaxyRvirScalar = 0.5;
 var skewerWidth = 0.06;
 var galaxyRedHSL = "hsl(0, 90%, 50%)";
 var galaxyBlueHSL = "hsl(200, 70%, 50%)";
 var skewerAbsorptionMinHSL = "hsl(100, 90%, 50%)";
 var skewerAbsorptionMaxHSL = "hsl(280, 90%, 60%)";
 var showLabels = true;
-var cameraFocalPoint = new THREE.Vector3(0,0,0);
+var cameraFocalPoint = new THREE.Vector3(0,0,0); */
+
 var boxRadius = 30;
 var skewerLinearFiltering = false;
 
-var distanceFromSkewer = 0.5; // Determines a distance for toggling on and off galaxies near Skewers
-
-var currentFile = optionFile;
+var distanceFromSkewer = 0.5;
+	// Determines a distance for toggling on and off galaxies near Skewers
 
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 
 var pointOverIdx = -1;
 var prevPointOverIdx = -1;
+var cylOverIdx = -1;
+var prevCylOverIdx = -1;
 
+
+let graphWidth = window.innerWidth/2 - 50, graphHeight = 200; // FIXME: ew, globals
+let graph = initGraph();
+
+let xScale = d3.scaleLinear().domain([.5, .9]).range([0, graphWidth]),
+	yScale = d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
+	// FIXME: camera reversed (high dist to low dist)
+
+// TODO: attach dat.gui
 
 //cylinderGroup.visible = false;
+
+let getProjections = (skewers) => {
+	return skewers.map( u => {
+		let skewerLine = new THREE.Line3(u.startPoint, u.endPoint);
+		return galaxies.map( v => {
+			let closest = new THREE.Vector3();
+			skewerLine.closestPointToPoint(v.position, true, closest)
+			return closest
+		})
+	})
+}
+let projections = []
 
 function onKeyDown(event) {
 
@@ -89,24 +111,20 @@ function onMouseMove( event ) {
 
 	// calculate objects intersecting the picking ray
 	var intersects = raycaster.intersectObjects( scene.children );
-
 	pointOverIdx = -1;
 
 	for ( var i = 0; i < intersects.length; i++ ) {
 		var p = intersects[ i ];
-		
-		//console.log(p);
 
+		// greedy fuzzy select?
 		if (p.object.type == "Points" && p.distanceToRay < 0.2) {
-			//console.log(p);
 			pointOverIdx = p.index;
 			break;
 		}
 	}
-
 	
 	if (pointOverIdx >= 0 && pointOverIdx != prevPointOverIdx) {
-
+		// mouse is over new point; show galaxy details
 		var cs = boxOfPoints.geometry.attributes.isSelected.array;
 		
 		for (var p = 0; p < cs.length; p++) {
@@ -114,17 +132,14 @@ function onMouseMove( event ) {
 		}
 	
 		cs[pointOverIdx] = 1.0;	
-
 		prevPointOverIdx = pointOverIdx;
-		
 		boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
 
-		console.log(cylinderGroup);
-	
+		//console.log(galaxies[pointOverIdx]);
+		
 	} 
-	
 	if (pointOverIdx < 0 && prevPointOverIdx >= 0) {
-
+		// mouse isn't over a point anymore
 		var cs = boxOfPoints.geometry.attributes.isSelected.array;
 		
 		for (var p = 0; p < cs.length; p++) {
@@ -133,34 +148,122 @@ function onMouseMove( event ) {
 
 		prevPointOverIdx = -1;
 		boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
-
-
 	}
 	
 
-
 	//intersect with skewers - not doing anything with this yet...
 	intersects = raycaster.intersectObjects( cylinderGroup.children );
+	prevCylOverIdx = cylOverIdx
+	cylOverIdx = -1;
 
 	for ( var i = 0; i < intersects.length; i++ ) {
 		var p = intersects[ i ];
-		
-		//console.log(p);
 
 		if ( cylinderGroup.visible == true && p.object.type == "Mesh") {
-			console.log(p);
-			//pointOverIdx = p.index;
+			cylOverIdx = cylinderGroup.children.indexOf(p.object) // recompute index to recover model object
+			//console.log('skewers['+cylOverIdx+']', p);
+
+			// cylOverLoc = p.point; // EXPECT offset by radius from actual position along skewer.
 			break;
 		}
 	}
 
-
-
-
-
-
+	if (cylOverIdx > -1 && cylOverIdx != prevCylOverIdx) {
+		plotSkewerSpectra();
+		plotSkewerNeighbors();
+	}
 }
 
+function plotSkewerSpectra() {
+	let u = skewers[cylOverIdx];
+	let spectra = d3.entries(u.absorptionData);
+
+	let x = xScale, y = yScale;
+	let pen = d3.line()
+				.x((d) => x(d.distScaled))
+				.y((d) => y(d.fluxNorm));
+	// let graph = d3.select('#graph').select('g')
+
+	// fresh axes rendering x(), y()
+	graph.select('.xaxis')
+		.call(d3.axisBottom(x))
+		.selectAll('text')
+			.attr('stroke', 'none')
+			.attr('fill', 'white');
+	graph.select('.yaxis')
+		.call(d3.axisLeft(y))
+		.selectAll('text')
+			.attr('stroke', 'none')
+			.attr('fill', 'white');
+
+	graph.select('.title')
+		.text(u.name);
+
+	// update plot with all absorption data for this skewer
+
+	graph.selectAll('.pen').remove()
+	for (let i = 0; i < spectra.length; ++i)
+		graph.append('path')
+			.attr('class', 'pen')
+			.attr('d', pen(spectra[i].value) )
+			.attr('stroke', spectra[i].key == 'HI' ? 'white' : 'gray' )
+			.attr('fill', 'none');
+
+			// ({value: v}) => pen(v)
+			// ({key: k}) => k == 'HI' ? 'white' : k == 'CIV' ? 'blue' : 'red'
+}
+
+function plotSkewerNeighbors() {
+	let u = skewers[cylOverIdx];
+	let p = projections[cylOverIdx]; // FIXME: pipe from dat.gui
+
+
+	graph.selectAll('.mark').remove()
+	for (var i = 0; i < galaxies.length; i++) {0
+		let dist = p[i].distanceTo(galaxies[i].position)
+
+		if (dist < distanceFromSkewer) { // filter
+			let distAlong = p[i].z / boxRadius // map
+
+			let j = pointOverIdx // boxOfPoints and galaxies not aligned?
+			// if (j == i)
+			console.log(distAlong)
+
+			graph.append('rect')
+				.attr('class', 'mark')
+				.attr('x', xScale(distAlong))
+				.attr('y', graphHeight/2 - 10)
+				// yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
+				.attr('width', 5 / (1*dist + 1))
+				.attr('height', 20)
+				// TODO: fade more distant neighbors
+				.attr('fill', pointOverIdx == i ? 'red' : 'lightblue')
+		}
+	}
+}
+
+function initGraph() {
+	let graph = d3.select('#graph')
+					.attr("width", graphWidth + 50)
+					.attr("height", graphHeight + 50)
+					.append('g')
+						.attr("transform", "translate(25, 25)")
+
+	graph.append('g').attr('class', 'xaxis')
+		.attr('transform', 'translate(0,'+graphHeight+')')
+		.attr('stroke', 'white')
+	graph.append('g').attr('class', 'yaxis')
+		.attr('stroke', 'white')
+	
+	graph.append('text').attr('class', 'title')
+		.attr('transform', 'translate('+graphWidth/2+', 0)')
+		.attr('text-anchor', 'middle')
+		.attr('fill', 'white')
+
+	// let trace = graph.selectAll('.pen')
+		 			 // .data(data) // FIXME
+	return graph // [graph, trace]
+}
 
 init();
 animate();
@@ -169,75 +272,53 @@ animate();
 
 
 
-function processOptions(data) {
+function processOptions(data) {		
+	let parse = {
+		'skewerData': (v) => {skewerFile = v},
+		'skewerDataFiles': (v) => {skewerList = v},
+		'galaxyData': (v) => {galaxyFile = v},
+		'galaxyRvirScalar': (v) => {galaxyRvirScalar = parseFloat(v)},
+		'galaxyRedHSL': (v) => {galaxyRedHSL = v},
+		'galaxyBlueHSL': (v) => {galaxyBlueHSL = v},
+		'skewerWidth': (v) => {skewerWidth = parseFloat(v)},
+		'skewerAbsorptionMinHSL': (v) => {skewerAbsorptionMinHSL = v},
+		'skewerAbsorptionMaxHSL': (v) => {skewerAbsorptionMaxHSL = v},
+		'skewerLinearFiltering': (v) => {skewerLinearFiltering = (v == 'true')},
+		'showLabels': (v) => {showLabels = (v == 'true')},
+		'boxRadius': (v) => {boxRadius = v},
+		'cameraFocalPoint': (v) => {
+			var vals = v.split(",");
+			cameraFocalPoint = new THREE.Vector3(
+				parseFloat(vals[0]), parseFloat(vals[1]), parseFloat(vals[2]));
 
+			controls.target = cameraFocalPoint;
+			controls.update();
+			},
+		'cameraPositionZ': (v) => {
+			camera.position.z = v
+			console.log(camera.position)
+		}
+	}
+	
 	var rows = data.split("\n"); 
-	for ( var i = 0; i < rows.length - 1; i ++ ) {
+	for ( var i = 0; i < rows.length; i ++ ) {
+		// careful: includes blank rows.
 
 		var cells = rows[i].split("=");
 		var key = cells[0];
 		var value = cells[1];
-		
-		//console.log("" + cells[0] + " = " + cells[1]);
-		
-		
-		if (key == "skewerData") {
-			skewerFile = value;
 
-		} else if (key == "skewerDataFiles") {
-			skewerList = value;
-
-		} else if (key == "galaxyData") {
-			galaxyFile = value;
-
-		} else if (key == "galaxyRvirScalar") {
-			galaxyRvirScalar = parseFloat(value);
-			
-		} else if (key == "galaxyRedHSL") {
-			galaxyRedHSL = value;
-
-		} else if (key == "galaxyBlueHSL") {
-			galaxyBlueHSL = value;
-
-		} else if (key == "skewerWidth") {
-			skewerWidth = parseFloat(value);
-
-		} else if (key == "skewerAbsorptionMinHSL") {
-			skewerAbsorptionMinHSL = value;
-
-		} else if (key == "skewerAbsorptionMaxHSL") {
-			skewerAbsorptionMaxHSL = value;
-
-		} else if (key == "skewerLinearFiltering") {
-			skewerLinearFiltering = (value == 'true');
-
-		} else if (key == "showLabels") {
-			showLabels = (value == 'true');
-
-		} else if (key == "boxRadius") {
-			boxRadius = value;
-
-		} else if (key == "cameraFocalPoint") {
-			var vals = value.split(",");
-			cameraFocalPoint = new THREE.Vector3(parseFloat(vals[0]), parseFloat(vals[1]), parseFloat(vals[2]));
-			console.log("cameraFocalPoint = " + cameraFocalPoint);
-			console.log(cameraFocalPoint);
-			controls.target = cameraFocalPoint;
-			controls.update();
-
-		}
+		console.log(key, value)
+		if (key in parse) parse[key](value)
 	}
 }
 
 
 function createAbsorptionDataTexture(absorptionData) {
-
 	// create a buffer with color data
 
 	var resY = absorptionData.length - 1;
-
 	var data = new Uint8Array( 4 * resY );
-
 
 	var colorMin = new THREE.Color(skewerAbsorptionMinHSL);
 	var colorMax = new THREE.Color(skewerAbsorptionMaxHSL);
@@ -253,7 +334,6 @@ function createAbsorptionDataTexture(absorptionData) {
 		//var lerpVal = (ar + 1.0) * 0.5; //scale from -1->+1 to 0->1
 
 		var lerpVal;
-
 		if (ar < 0.0) {
 			lerpVal = (ar * -1.0);
 			colorVal.setHSL(minHSL.h, minHSL.s, lerpVal+0.2); //   = colorMin.clone().lerp(black, lerpVal);
@@ -261,9 +341,6 @@ function createAbsorptionDataTexture(absorptionData) {
 			colorVal.setHSL(maxHSL.h, maxHSL.s, lerpVal+0.2 );
 		}
 		//console.log("ar = " + ar + ", lerpVal = " + lerpVal);
-		
-		
-		
 
 		var stride = i * 4;
 
@@ -273,24 +350,19 @@ function createAbsorptionDataTexture(absorptionData) {
 		data[ stride + 3 ] = 255;
 	}
 
-
 	var texture;
 	if (skewerLinearFiltering) {
 		//DataTexture( data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter, anisotropy )
-		texture = new THREE.DataTexture( data, 1, resY, THREE.RGBAFormat, THREE.UnsignedByteType, THREE.UVMapping, THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping, THREE.LinearFilter, THREE.LinearFilter );
-
+		texture = new THREE.DataTexture( data, 1, resY,
+				THREE.RGBAFormat, THREE.UnsignedByteType, THREE.UVMapping, THREE.ClampToEdgeWrapping,
+				THREE.ClampToEdgeWrapping, THREE.LinearFilter, THREE.LinearFilter );
 	} else {
 
 		texture = new THREE.DataTexture( data, 1, resY, THREE.RGBAFormat ); 
 	}
-
-
 	texture.needsUpdate = true; // just a weird thing that Three.js wants you to do after you set the data for the texture
 
 	return texture;
-
-
-
 }
 
 /*
@@ -341,9 +413,7 @@ function createDataTexture() {
 function processGalaxyData(data) {
 
 	console.log("data length = " + data.length);
-
 	var rows = data.split("\n"); 
-
 	console.log("splitLines length = " + rows.length);
 
 	//initialize point attributes
@@ -369,10 +439,11 @@ function processGalaxyData(data) {
 		visibles[ idx ] = 1.0;
 
 		var cells = rows[i].split(" ");
+		var id = cells[0];
 
-		var useX = parseFloat(cells[0]);
-		var useY = parseFloat(cells[1]);
-		var useZ = parseFloat(cells[2]);
+		var useX = parseFloat(cells[1]);
+		var useY = parseFloat(cells[2]);
+		var useZ = parseFloat(cells[3]);
 
 		//console.log(useX + "/" + useY + "/" + useZ);
 		vertex.x = useX * boxRadius;
@@ -380,32 +451,32 @@ function processGalaxyData(data) {
 		vertex.z = useZ * boxRadius;
 		vertex.toArray( positions, idx * 3 );
 		
-			
-		var galaxyColor = cells[6];
-		if (galaxyColor == "red") {
+
+		var galaxyColor = cells[7];
+		if (galaxyColor.includes("red")) { // watch out for carriage returns - chrome on windows specific?
 			colors[ idx ] = 0;
 
-		} else if (galaxyColor == "blue") {
+		} else if (galaxyColor.includes("blue")) {
 			colors[ idx ] = 1;
 			
 		} else {
 			colors[ idx ] = 2;
 		}
+		// if (i == 1) console.log(cells)
 
-		
-
-		var galaxyRvir = parseFloat(cells[3]);
-		//console.log("galaxyRvir = " + galaxyRvir);
-
-		//console.log("galaxyRvirScalar = " + galaxyRvirScalar);
-
+		var galaxyRvir = parseFloat(cells[4]);
+		// console.log("galaxyRvir = " + galaxyRvir);
 		sizes[ idx ] = galaxyRvir; // * galaxyRvirScalar; moved this to the uniforms in the shaderMaterial, multiplication now happens in the vertex shader
 
-				
-		galaxies.push(new Galaxy(new THREE.Vector3(vertex.x, vertex.y, vertex.z), galaxyRvir, galaxyColor));
+		let g = new Galaxy(id, new THREE.Vector3(vertex.x, vertex.y, vertex.z), galaxyColor);
+		// TODO: read property column names
+		g.rvir = galaxyRvir;
+		g.redshift = parseFloat(cells[5]);
+		g.log_sSFR = parseFloat(cells[6]);
+		galaxies.push(g);
 	}
-
-
+	// console.log(colors);
+	// console.log(sizes);
 
 	var geometry = new THREE.BufferGeometry();
 	geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
@@ -474,47 +545,32 @@ function toggleGalaxiesNearSkewers(skewers, maxDistance) {
 
 	//turn off all stars, then go through the selected skewers and turn on ones that < maxDistance from it 
 
-	for (var g = 0; g < galaxies.length; g++) {
-		var galaxy = galaxies[g];
+	for (var g = 0; g < galaxies.length; g++)
 		boxOfPoints.geometry.attributes.isVisible.array[ g ] = 0.0;
-	}
-
-
+		
 	for (var s = 0; s < skewers.length; s++) {
-		toggleGalaxiesNearSkewer(skewers[s], maxDistance);
-
-	}
-
-}
-
-function toggleGalaxiesNearSkewer(skewer, maxDistance) { 
-
-	var skewerLine = new THREE.Line3(skewer.startPoint, skewer.endPoint);
-	
-	for (var g = 0; g < galaxies.length; g++) {
-		var galaxy = galaxies[g];
-
-		var closestPt = new THREE.Vector3();
-		skewerLine.closestPointToPoint ( galaxy.position, true, closestPt);
-
-		var dist = closestPt.distanceTo(galaxy.position);
-		//console.log("galaxy " + galaxy.position + " is " + dist + " from skewerRay ");
-		//console.log(closestPt );
-		//console.log(galaxy.position);
-		//console.log(skewerLine);
-
-		if (dist < maxDistance) {
-			boxOfPoints.geometry.attributes.isVisible.array[ g ] = 1.0;
-		} 
-	
+		let mask = projections[s]
+					.map((v,i) => v.distanceTo(galaxies[i].position)
+									<= maxDistance ? 1 : 0);
+					// TODO: refactor
+		for (var g = 0; g < galaxies.length; g++)
+			if (mask[g])
+				boxOfPoints.geometry.attributes.isVisible.array[ g ] = 1.0;
 		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
 	}
+
 }
 
 
 
+function plotSkewer(name, startPoint, endPoint){
+	// was 'recreate_SkewerIndividual'
 
-function createSkewer(name, startPoint, endPoint, absorptionData) {
+	//Whenever this function is called it resets the position of skewers based on the original skewerDataFiles.txt
+	//So if their positions is ever moved, it will be placed back during the call to reload_Skewers()
+	// This means that in the future if you ever move the skewers from their original position then you will 
+	// need to figure out thow to call reload_Skewers without using the skewerDataFiles.txt
+	//****Also**** In this call skewers[] is not changed, and text group is not changed
 
 	var cylMaterialFront = new THREE.ShaderMaterial( {
 
@@ -524,7 +580,8 @@ function createSkewer(name, startPoint, endPoint, absorptionData) {
 			texture:   { value: null } //texture gets set below
 		},
 		vertexShader:   document.getElementById( 'cyl_vertexshader' ).textContent,
-		fragmentShader: document.getElementById( 'cyl_fragmentshader' ).textContent,
+		fragmentShader: document.getElementById( 'cyl_fragmentshader2' ).textContent,
+		// cyl_fragmentshader samples a texture
 
 		//blending:       THREE.AdditiveBlending,
 		depthTest:      true,
@@ -548,13 +605,13 @@ function createSkewer(name, startPoint, endPoint, absorptionData) {
 
 	});
 
-
 	var cylLength = new THREE.Vector3().subVectors(endPoint, startPoint).length();
 	var cylGeom = new THREE.CylinderBufferGeometry(skewerWidth, skewerWidth, cylLength, 32, 1, true);
 	cylGeom.translate(0, cylLength / 2, 0);
 	cylGeom.rotateX(Math.PI / 2);
 
-	cylMaterialFront.uniforms.texture.value = createAbsorptionDataTexture(absorptionData);
+	// cylMaterialFront.uniforms.texture.value = createAbsorptionDataTexture(absorptionData);
+		//**this may reset the color textures(Delete After Testing)
 	var cyl = new THREE.Mesh(cylGeom, cylMaterialFront);
 
 	cyl.position.copy(startPoint);
@@ -565,14 +622,23 @@ function createSkewer(name, startPoint, endPoint, absorptionData) {
 	cyl2.lookAt(endPoint);
 
 	cylinderGroup.add(cyl);
+	// console.log(cyl);	
 
-	//scene.add( cyl2 );
+	scene.add( cyl2 ); // DO NOT add to cylinderGroup - won't be aligned with skewers data.
+}
 
-	//console.log(cyl);
+function createSkewer(name, startPoint, endPoint, spectrum, data) {
 
-	skewers.push( new Skewer(startPoint, endPoint) );
-		
-	
+	// TODO: load each skewer in constant time using a properly indexed data structure
+	let ret = skewers.find((u) => u.name == name)
+	if (!ret) {
+		ret = new Skewer(name, startPoint, endPoint)
+		skewers.push( ret ); // register to model
+
+		plotSkewer(...arguments) // FIXME: generate absorption texture(s)
+	}
+	ret.attach(spectrum, data) // FIXME: naive merge doesn't update startPoint, endPoint
+	// console.log(name, data[0])
 	
 	if (showLabels) {
 		//Label  (x,y) = (-0.166381,0.062923) as ‘Coma cluster’ //z position??
@@ -595,73 +661,52 @@ function createSkewer(name, startPoint, endPoint, absorptionData) {
 		});
 		sprite.position.setX(startPoint.x).setY(startPoint.y).setZ(startPoint.z);
 		textGroup.add(sprite);
-	
-	
-		scene.add(textGroup);
 	}
-
 }
 
-function loadSkewerData(skewerFileName) {
+function onLoadSkewer(relpath, factory) {
+	return (data) => {
+		// console.log(" skewerFileName = " + skewerFileName);
+		var nameVals = relpath.split("__");
+		// e.g. data/spectra_HI_partial_norm/2MASS-J13250381+2717189__-0.134_0.031_0.511__-0.22_0.052_0.841.dat
 
-	
-	loader.load(
-		skewerFileName,
+		var path = nameVals[0].split('/');
+		var spectra = path[1].split('_')[1];
 
-		function ( data ) {
+		var name = path[2];
+		var start = nameVals[1].split("_");
+		var end = nameVals[2].split("_");
 
-			//console.log(" skewerFileName = " + skewerFileName);
-			var nameVals = skewerFileName.split("__"); 
+		var sX = parseFloat(start[0]) * boxRadius;
+		var sY = parseFloat(start[1]) * boxRadius;
+		var sZ = parseFloat(start[2]) * boxRadius;
 
-			var name = nameVals[0];
-			name = name.split("/")[2];
-			var start = nameVals[1].split("_");
-			var end = nameVals[2].split("_");;
+		var eX = parseFloat(end[0]) * boxRadius;
+		var eY = parseFloat(end[1]) * boxRadius;
+		var eZ = parseFloat(end[2].split(".dat")[0]) * boxRadius;
 
-			var sX = parseFloat(start[0]) * boxRadius;
-			var sY = parseFloat(start[1]) * boxRadius;
-			var sZ = parseFloat(start[2]) * boxRadius;
+		//console.log("start = " + sX + "/" + sY + "/" + sZ);
+		//console.log("end = " + eX + "/" + eY + "/" + eZ);
 
-			var eX = parseFloat(end[0]) * boxRadius;
-			var eY = parseFloat(end[1]) * boxRadius;
-			var eZ = parseFloat(end[2].split(".dat")[0]) * boxRadius;
+		var rows = data.split("\n"); 
+		var rates = [];
+		for ( var i = 1; i < rows.length - 1; i ++ ) {
 
-			//console.log("start = " + sX + "/" + sY + "/" + sZ);
-			//console.log("end = " + eX + "/" + eY + "/" + eZ);
-
-
-			var rows = data.split("\n"); 
-
-			var absorptionRates = [];
-			for ( var i = 1; i < rows.length - 1; i ++ ) {
-
-				var cells = rows[i].split(" ");
-				absorptionRates.push( parseFloat(cells[5]) );
-			}
-
-			allAbsorpitonRates.push(absorptionRates); //Saves the absorption rates for each skewer
-
-			//console.log("ars length = " + absorptionRates.length);
-			//console.log(absorptionRates);
-
-
-			createSkewer(name, new THREE.Vector3(sX,sY,sZ), new THREE.Vector3(eX,eY,eZ), absorptionRates);
-
-		},
-
-		function ( xhr ) {
-			//console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
-		},
-
-		function ( err ) {
-			console.error( 'An error happened' );
+			var cells = rows[i].split(" "); // FIXME: brittle column names
+			var ret = {'distScaled': parseFloat(cells[3]),
+					   'fluxNorm': parseFloat(cells[5]),}
+			rates.push( ret );
 		}
-	);
 
+		// allAbsorptionRates.push(absorptionRates); //Saves the absorption rates for each skewer
+		//console.log("ars length = " + absorptionRates.length);
+		//console.log(absorptionRates);
+
+		factory(name, new THREE.Vector3(sX,sY,sZ), new THREE.Vector3(eX,eY,eZ), spectra, rates);
+	}
 }
 
 function loadData() {
-
 	//console.log("currentFile = [" + currentFile + "]");
 
 	loader.load(
@@ -684,143 +729,44 @@ function loadData() {
 
 			} else if (currentFile == skewerList) {
 				//console.log("skewer file = \n" + data);
-
 				var rows = data.split("\n"); 
 
 				for ( var i = 1; i < rows.length - 1; i ++ ) {
-					loadSkewerData(rows[i]);
-				}		
+					// load skewer data
+					loader.load(
+						rows[i],
+						onLoadSkewer(rows[i], createSkewer),
+
+						// console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+						function ( xhr ) {},
+						function ( err ) { console.error( 'An error happened' ); }
+					);
+				}
 				
 				scene.add( cylinderGroup );
-				console.log(cylinderGroup);
+				// console.log(cylinderGroup);
+
+				console.log('loaded so far:', skewers.length, galaxies.length)
+				projections = getProjections(skewers); // FIXME: 
 
 				if(sceneReady != true){				
 					sceneReady = true;
+
 					displayGui(); /*displays gui once the scene is ready, 
 								this is here so that the data is read in before the gui is made*/
 				}
 			}
 		},
 
-		function ( xhr ) {
-			//console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
-		},
-
-		function ( err ) {
-			console.error( 'An error happened' );
-		}
-	);
-}
-
-function recreate_SkewerIndividual(name, startPoint, endPoint, absorptionData){
-		var cylMaterialFront = new THREE.ShaderMaterial( {
-
-		uniforms: {
-			amplitude: { value: 1.0 },
-			color:     { value: new THREE.Color( 0xffffff ) },
-			texture:   { value: null } //texture gets set below
-		},
-		vertexShader:   document.getElementById( 'cyl_vertexshader' ).textContent,
-		fragmentShader: document.getElementById( 'cyl_fragmentshader' ).textContent,
-
-		//blending:       THREE.AdditiveBlending,
-		depthTest:      true,
-		transparent:    false,
-		side:		THREE.FrontSide
-	});
-
-	var cylMaterialBack = new THREE.ShaderMaterial( {
-
-		uniforms: {
-			amplitude: { value: 1.0 },
-			color:     { value: new THREE.Color( 0xffffff ) },
-		},
-		vertexShader:   document.getElementById( 'cyl_vertexshader' ).textContent,
-		fragmentShader: document.getElementById( 'cyl_fragmentshader2' ).textContent,
-
-		//blending:       THREE.AdditiveBlending,
-		depthTest:      true,
-		transparent:    false,
-		side:		THREE.BackSide
-
-	});
-
-
-	var cylLength = new THREE.Vector3().subVectors(endPoint, startPoint).length();
-	var cylGeom = new THREE.CylinderBufferGeometry(skewerWidth, skewerWidth, cylLength, 32, 1, true);
-	cylGeom.translate(0, cylLength / 2, 0);
-	cylGeom.rotateX(Math.PI / 2);
-
-	cylMaterialFront.uniforms.texture.value = createAbsorptionDataTexture(absorptionData); //**this may reset the color textures(Delete After Testing)
-	var cyl = new THREE.Mesh(cylGeom, cylMaterialFront);
-
-	cyl.position.copy(startPoint);
-	cyl.lookAt(endPoint);
-
-	var cyl2 = new THREE.Mesh(cylGeom, cylMaterialBack);
-	cyl2.position.copy(startPoint);
-	cyl2.lookAt(endPoint);
-
-	cylinderGroup.add(cyl);
-
-	//Whenever this function is called it resets the position of skewers based on the original skewerDataFiles.txt
-	//So if their positions is ever moved, it will be placed back during the call to reload_Skewers()
-	// This means that in the future if you ever move the skewers from their original position then you will 
-	// need to figure out thow to call reload_Skewers without using the skewerDataFiles.txt
-	//****Also**** In this call skewers[] is not changed, and text group is not changed
-}
-
-function reload_SkewerData(skewerFileName){
-	loader.load(
-		skewerFileName,
-
-		function ( data ) {
-
-			//console.log(" skewerFileName = " + skewerFileName);
-			var nameVals = skewerFileName.split("__"); 
-
-			var name = nameVals[0];
-			name = name.split("/")[2];
-			var start = nameVals[1].split("_");
-			var end = nameVals[2].split("_");;
-
-			var sX = parseFloat(start[0]) * boxRadius;
-			var sY = parseFloat(start[1]) * boxRadius;
-			var sZ = parseFloat(start[2]) * boxRadius;
-
-			var eX = parseFloat(end[0]) * boxRadius;
-			var eY = parseFloat(end[1]) * boxRadius;
-			var eZ = parseFloat(end[2].split(".dat")[0]) * boxRadius;
-
-			//console.log("start = " + sX + "/" + sY + "/" + sZ);
-			//console.log("end = " + eX + "/" + eY + "/" + eZ);
-
-
-			var rows = data.split("\n"); 
-
-			var absorptionRates = [];
-			for ( var i = 1; i < rows.length - 1; i ++ ) {
-
-				var cells = rows[i].split(" ");
-				absorptionRates.push( parseFloat(cells[5]) );
-			}
-
-			//console.log("ars length = " + absorptionRates.length);
-			//console.log(absorptionRates);
-
-
-			recreate_SkewerIndividual(name, new THREE.Vector3(sX,sY,sZ), new THREE.Vector3(eX,eY,eZ), absorptionRates);
-
-		},
-
+		// console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
 		function ( xhr ) {},
-
-		function ( err ) {console.error( 'An error happened' );}
+		function ( err ) { console.error( 'An error happened' ); }
 	);
 }
 
 function recreate_Skewers(){
 	scene.remove(cylinderGroup); // taking out all the skewers
+
 	cylinderGroup = null;
 	cylinderGroup = new THREE.Group(); // resetting cylinderGroup so that it is empty
 
@@ -830,7 +776,14 @@ function recreate_Skewers(){
 		function(data){
 			var rows = data.split("\n");
 			for(var i = 1; i < rows.length - 1; i++){
-				reload_SkewerData(rows[i]);
+				loader.load(
+					rows[i],
+					onLoadSkewer(rows[i], plotSkewer),
+
+					// console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+					function ( xhr ) {},
+					function ( err ) { console.error( 'An error happened' ); }
+				)
 			}
 
 			scene.add( cylinderGroup );
@@ -846,8 +799,9 @@ function init() {
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( window.innerWidth, window.innerHeight );
 
-	camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
-	camera.position.z = 50;
+	camera = new THREE.PerspectiveCamera(
+		10 /* fov */, window.innerWidth / window.innerHeight /* aspect */,
+		1 /* near */, 10000 /* far */ );
 	controls = new THREE.OrbitControls( camera );
 	
 	scene = new THREE.Scene();
@@ -856,6 +810,7 @@ function init() {
 	textGroup = new THREE.Group();
 
 	loadData();
+
 	//displayGui(); This was moved inside of loadData()
 	//              For some reason skewerWidth goes back to 0.06
 	//              when not inside of loadData()
@@ -874,6 +829,7 @@ function init() {
 //Creates a gui using the dat.gui library
 function displayGui(){
 	gui = new dat.GUI( {width: 350} );
+	gui.domElement.id = 'dat-gui';
 
 	//Get the color from the global variables
 	//I make use of the fact that THREE.Color can switch between rgb and hsl
@@ -900,7 +856,7 @@ function displayGui(){
 	var galaxyFolder = gui.addFolder('Galaxies');
 	var galNearSkew =      galaxyFolder.add(guiParams, "galNearSkewer").name("Galaxies Close to Skewers");
 	var galRangeNearSkew = galaxyFolder.add(guiParams, "galDist2Skewer", 0.01, 6).name("Range From Skewer");
-	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", 0, 1000).name("Rvir Scalar");
+	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", 0, 1).name("Rvir Scalar");
 	var galaxyRed  = galaxyFolder.addColor(guiParams, "galRedHSL").name("Red Value");
 	var galaxyBlue = galaxyFolder.addColor(guiParams, "galBlueHSL").name("Blue Value");
 
@@ -910,7 +866,7 @@ function displayGui(){
 	var textVis =   skewerFolder.add(guiParams, "textVisible").name("Toggle Text Visibility");
 	var skewerWidthChange = skewerFolder.add(guiParams, "skewerWid", 0.0, 0.5).step(0.01).name("Width");
 	var skewerMinAbs = skewerFolder.addColor(guiParams, "skewerAbsorMinHSL").name("Minimum Absorption");
-	var skewerMaxAbs = skewerFolder.addColor(guiParams, "skewerAbsorMaxHSL").name("Maximum Absorpiton");
+	var skewerMaxAbs = skewerFolder.addColor(guiParams, "skewerAbsorMaxHSL").name("Maximum Absorption");
 
 
 	//Functions to update the galaxy parameters in the scene------
@@ -930,8 +886,9 @@ function displayGui(){
 	galRangeNearSkew.onChange(function(value){
 		distanceFromSkewer = value;
 		if(guiParams.galNearSkewer){
-			toggleGalaxiesNearSkewers(skewers, distanceFromSkewer);
+			toggleGalaxiesNearSkewers(skewers);
 		}
+		// plotSkewerNeighbors(); // not until performance improves! (TODO: caching)
 	});
 
 	galaxyRvirSc.onChange(function(value){
@@ -968,11 +925,11 @@ function displayGui(){
 		
 	});
 
-	skewerMinAbs.onChange(function(value){
+	/* skewerMinAbs.onChange(function(value){
 		//console.log(value);
 		skewerAbsorptionMinHSL = "rgb("+Math.round(value[0])+" ,"+Math.round(value[1])+" ,"+Math.round(value[2])+")";
 		for(var i = 0; i< cylinderGroup.children.length; i++){
-			cylinderGroup.children[i].material.uniforms.texture.value = createAbsorptionDataTexture(allAbsorpitonRates[i]);
+			cylinderGroup.children[i].material.uniforms.texture.value = createAbsorptionDataTexture(allAbsorptionRates[i]);
 		}
 	});
 
@@ -980,9 +937,9 @@ function displayGui(){
 		skewerAbsorptionMaxHSL = "rgb("+Math.round(value[0])+", "+Math.round(value[1])+", "+Math.round(value[2])+")";
 		//console.log(skewerAbsorptionMaxHSL);
 		for(var i = 0; i< cylinderGroup.children.length; i++){
-			cylinderGroup.children[i].material.uniforms.texture.value = createAbsorptionDataTexture(allAbsorpitonRates[i]);
+			cylinderGroup.children[i].material.uniforms.texture.value = createAbsorptionDataTexture(allAbsorptionRates[i]);
 		}
-	});
+	}); */
 
 
 
@@ -992,7 +949,7 @@ function displayGui(){
 
 	// dg will be used to test whether the mouse is on the dat.gui menu
 	// If it is then you need to stop the orbitControls. If it's not then the camera movement should be enabled
-	dg = document.getElementsByClassName('dg')[0];
+	dg = document.getElementById('dat-gui');
 	isOverControls = false;
 	dg.onmouseover = function(){
 		isOverControls = true;
@@ -1004,6 +961,9 @@ function displayGui(){
 		controls.enabled = true;
 		controls.update();
 	}
+
+	let close = document.getElementsByClassName('close-button');
+	dg.prepend(close[0]);
 }
 
 

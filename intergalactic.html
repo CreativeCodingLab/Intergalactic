@@ -16,6 +16,16 @@
 				margin: 0px;
 				overflow: hidden;
 			}
+			#dat-gui {
+				float: left;
+			}
+			#details {
+				width: 50%;
+				float: right;
+				top: 3px;
+
+			}
+
 			#info {
 				color: #fff;
 				position: absolute;
@@ -30,11 +40,20 @@
 	<body>
 		<div id="container"></div>
 
+		<div style="position: fixed; top: 0; left: 0; right: 0;">
+			<div id="details">
+				<svg id="graph"></svg>
+				<img id="galaxy-thumbnail" />
+			</div>
+		</div>
+
 		<script src="libs/three.js"></script>
 		<script src="libs/OrbitControls.js"></script>
 		<script src="libs/THREE.TextTexture.js"></script>
 		<script src="libs/THREE.TextSprite.js"></script>
+
 		<script src="libs/dat.gui.min.js"></script>
+		<script src="libs/d3.js"></script>
 
 		<script src="js/Galaxy.js"></script>
 		<script src="js/Skewer.js"></script>
