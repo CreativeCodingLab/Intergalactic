@@ -48,14 +48,28 @@ var cylOverIdx = -1;
 var prevCylOverIdx = -1;
 
 
-let graphWidth = window.innerWidth - 50, graphHeight = 200; // FIXME: ew, globals
+let graphWidth = window.innerWidth/2 - 50, graphHeight = 200; // FIXME: ew, globals
 let graph = initGraph();
 
-let xScale = d3.scaleLinear().domain([.9, .5]).range([0, graphWidth]),
+let xScale = d3.scaleLinear().domain([.5, .9]).range([0, graphWidth]),
 	yScale = d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
+	// FIXME: camera reversed (high dist to low dist)
+
 // TODO: attach dat.gui
 
 //cylinderGroup.visible = false;
+
+let getProjections = (skewers) => {
+	return skewers.map( u => {
+		let skewerLine = new THREE.Line3(u.startPoint, u.endPoint);
+		return galaxies.map( v => {
+			let closest = new THREE.Vector3();
+			skewerLine.closestPointToPoint(v.position, true, closest)
+			return closest
+		})
+	})
+}
+let projections = []
 
 function onKeyDown(event) {
 
@@ -121,8 +135,7 @@ function onMouseMove( event ) {
 		prevPointOverIdx = pointOverIdx;
 		boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
 
-		// console.log(cylinderGroup);
-		// console.log(galaxies[pointOverIdx]);
+		//console.log(galaxies[pointOverIdx]);
 		
 	} 
 	if (pointOverIdx < 0 && prevPointOverIdx >= 0) {
@@ -148,7 +161,7 @@ function onMouseMove( event ) {
 
 		if ( cylinderGroup.visible == true && p.object.type == "Mesh") {
 			cylOverIdx = cylinderGroup.children.indexOf(p.object) // recompute index to recover model object
-			// console.log('skewers['+cylOverIdx+']', p);
+			//console.log('skewers['+cylOverIdx+']', p);
 
 			// cylOverLoc = p.point; // EXPECT offset by radius from actual position along skewer.
 			break;
@@ -202,7 +215,7 @@ function plotSkewerSpectra() {
 
 function plotSkewerNeighbors() {
 	let u = skewers[cylOverIdx];
-	let p = perpendicularsTo(u); // FIXME: pipe from dat.gui
+	let p = projections[cylOverIdx]; // FIXME: pipe from dat.gui
 
 
 	graph.selectAll('.mark').remove()
@@ -219,12 +232,12 @@ function plotSkewerNeighbors() {
 			graph.append('rect')
 				.attr('class', 'mark')
 				.attr('x', xScale(distAlong))
-				.attr('y', 0) // yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
-				.attr('width', 1)
-				.attr('height', graphHeight)
-				.attr('opacity', 1 / (.01*dist + 1))
+				.attr('y', graphHeight/2 - 10)
+				// yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
+				.attr('width', 5 / (1*dist + 1))
+				.attr('height', 20)
 				// TODO: fade more distant neighbors
-				.attr('fill', pointOverIdx == i ? 'red' : 'white')
+				.attr('fill', pointOverIdx == i ? 'red' : 'lightblue')
 		}
 	}
 }
@@ -259,40 +272,43 @@ animate();
 
 
 
-function processOptions(data) {
+function processOptions(data) {		
+	let parse = {
+		'skewerData': (v) => {skewerFile = v},
+		'skewerDataFiles': (v) => {skewerList = v},
+		'galaxyData': (v) => {galaxyFile = v},
+		'galaxyRvirScalar': (v) => {galaxyRvirScalar = parseFloat(v)},
+		'galaxyRedHSL': (v) => {galaxyRedHSL = v},
+		'galaxyBlueHSL': (v) => {galaxyBlueHSL = v},
+		'skewerWidth': (v) => {skewerWidth = parseFloat(v)},
+		'skewerAbsorptionMinHSL': (v) => {skewerAbsorptionMinHSL = v},
+		'skewerAbsorptionMaxHSL': (v) => {skewerAbsorptionMaxHSL = v},
+		'skewerLinearFiltering': (v) => {skewerLinearFiltering = (v == 'true')},
+		'showLabels': (v) => {showLabels = (v == 'true')},
+		'boxRadius': (v) => {boxRadius = v},
+		'cameraFocalPoint': (v) => {
+			var vals = v.split(",");
+			cameraFocalPoint = new THREE.Vector3(
+				parseFloat(vals[0]), parseFloat(vals[1]), parseFloat(vals[2]));
+
+			controls.target = cameraFocalPoint;
+			controls.update();
+			},
+		'cameraPositionZ': (v) => {
+			camera.position.z = v
+			console.log(camera.position)
+		}
+	}
+	
 	var rows = data.split("\n"); 
-	for ( var i = 0; i < rows.length - 1; i ++ ) {
-		// includes blank rows.
+	for ( var i = 0; i < rows.length; i ++ ) {
+		// careful: includes blank rows.
 
 		var cells = rows[i].split("=");
 		var key = cells[0];
 		var value = cells[1];
-		//console.log("" + cells[0] + " = " + cells[1]);
-		
-		let parse = {
-			'skewerData': (v) => {skewerFile = v},
-			'skewerDataFiles': (v) => {skewerList = v},
-			'galaxyData': (v) => {galaxyFile = v},
-			'galaxyRvirScalar': (v) => {galaxyRvirScalar = parseFloat(v)},
-			'galaxyRedHSL': (v) => {galaxyRedHSL = v},
-			'galaxyBlueHSL': (v) => {galaxyBlueHSL = v},
-			'skewerWidth': (v) => {skewerWidth = parseFloat(v)},
-			'skewerAbsorptionMinHSL': (v) => {skewerAbsorptionMinHSL = v},
-			'skewerAbsorptionMaxHSL': (v) => {skewerAbsorptionMaxHSL = v},
-			'skewerLinearFiltering': (v) => {skewerLinearFiltering = (v == 'true')},
-			'showLabels': (v) => {showLabels = (v == 'true')},
-			'boxRadius': (v) => {boxRadius = v},
-			'cameraFocalPoint': (v) => {
-				var vals = v.split(",");
-				cameraFocalPoint = new THREE.Vector3(parseFloat(vals[0]), parseFloat(vals[1]), parseFloat(vals[2]));
-				console.log("cameraFocalPoint = " + cameraFocalPoint);
-				console.log(cameraFocalPoint);
-				controls.target = cameraFocalPoint;
-				controls.update();
-				},
-			}
 
-		// console.log(parse, key, value)
+		console.log(key, value)
 		if (key in parse) parse[key](value)
 	}
 }
@@ -397,9 +413,7 @@ function createDataTexture() {
 function processGalaxyData(data) {
 
 	console.log("data length = " + data.length);
-
 	var rows = data.split("\n"); 
-
 	console.log("splitLines length = " + rows.length);
 
 	//initialize point attributes
@@ -462,7 +476,7 @@ function processGalaxyData(data) {
 		galaxies.push(g);
 	}
 	// console.log(colors);
-	console.log(sizes);
+	// console.log(sizes);
 
 	var geometry = new THREE.BufferGeometry();
 	geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
@@ -535,7 +549,7 @@ function toggleGalaxiesNearSkewers(skewers, maxDistance) {
 		boxOfPoints.geometry.attributes.isVisible.array[ g ] = 0.0;
 		
 	for (var s = 0; s < skewers.length; s++) {
-		let mask = perpendicularsTo(skewers[s])
+		let mask = projections[s]
 					.map((v,i) => v.distanceTo(galaxies[i].position)
 									<= maxDistance ? 1 : 0);
 					// TODO: refactor
@@ -545,29 +559,6 @@ function toggleGalaxiesNearSkewers(skewers, maxDistance) {
 		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
 	}
 
-}
-
-function perpendicularsTo(skewer) { 
-	var skewerLine = new THREE.Line3(skewer.startPoint, skewer.endPoint);
-	let ret = Array(galaxies.length);
-
-	for (var i = 0; i < galaxies.length; i++) {
-		var galaxy = galaxies[i];
-
-		var closestPt = new THREE.Vector3();
-		skewerLine.closestPointToPoint ( galaxy.position, true, closestPt);
-
-		ret[i] = closestPt;
-		// console.log("galaxy " + galaxy.position + " is " + dist + " from skewerRay ");
-		//console.log(closestPt );
-		//console.log(galaxy.position);
-		//console.log(skewerLine);
-
-		/* if (dist < maxDistance) {
-			boxOfPoints.geometry.attributes.isVisible.array[ g ] = 1.0;
-		} */
-	}
-	return ret;
 }
 
 
@@ -647,8 +638,7 @@ function createSkewer(name, startPoint, endPoint, spectrum, data) {
 		plotSkewer(...arguments) // FIXME: generate absorption texture(s)
 	}
 	ret.attach(spectrum, data) // FIXME: naive merge doesn't update startPoint, endPoint
-
-	console.log(name, data[0])
+	// console.log(name, data[0])
 	
 	if (showLabels) {
 		//Label  (x,y) = (-0.166381,0.062923) as ‘Coma cluster’ //z position??
@@ -754,10 +744,14 @@ function loadData() {
 				}
 				
 				scene.add( cylinderGroup );
-				console.log(cylinderGroup);
+				// console.log(cylinderGroup);
+
+				console.log('loaded so far:', skewers.length, galaxies.length)
+				projections = getProjections(skewers); // FIXME: 
 
 				if(sceneReady != true){				
 					sceneReady = true;
+
 					displayGui(); /*displays gui once the scene is ready, 
 								this is here so that the data is read in before the gui is made*/
 				}
@@ -805,8 +799,9 @@ function init() {
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( window.innerWidth, window.innerHeight );
 
-	camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
-	camera.position.z = 50;
+	camera = new THREE.PerspectiveCamera(
+		10 /* fov */, window.innerWidth / window.innerHeight /* aspect */,
+		1 /* near */, 10000 /* far */ );
 	controls = new THREE.OrbitControls( camera );
 	
 	scene = new THREE.Scene();
@@ -815,6 +810,7 @@ function init() {
 	textGroup = new THREE.Group();
 
 	loadData();
+
 	//displayGui(); This was moved inside of loadData()
 	//              For some reason skewerWidth goes back to 0.06
 	//              when not inside of loadData()
@@ -890,9 +886,9 @@ function displayGui(){
 	galRangeNearSkew.onChange(function(value){
 		distanceFromSkewer = value;
 		if(guiParams.galNearSkewer){
-			toggleGalaxiesNearSkewers(skewers, distanceFromSkewer);
-			// plotSkewerNeighbors();
+			toggleGalaxiesNearSkewers(skewers);
 		}
+		// plotSkewerNeighbors(); // not until performance improves! (TODO: caching)
 	});
 
 	galaxyRvirSc.onChange(function(value){
@@ -953,7 +949,7 @@ function displayGui(){
 
 	// dg will be used to test whether the mouse is on the dat.gui menu
 	// If it is then you need to stop the orbitControls. If it's not then the camera movement should be enabled
-	dg = document.getElementsByClassName('dg')[0];
+	dg = document.getElementById('dat-gui');
 	isOverControls = false;
 	dg.onmouseover = function(){
 		isOverControls = true;
@@ -965,6 +961,9 @@ function displayGui(){
 		controls.enabled = true;
 		controls.update();
 	}
+
+	let close = document.getElementsByClassName('close-button');
+	dg.prepend(close[0]);
 }
 
 

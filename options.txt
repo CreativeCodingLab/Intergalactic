@@ -11,4 +11,4 @@ skewerLinearFiltering=false
 boxRadius=50
 showLabels=true
 cameraFocalPoint=0,0,34
-
+cameraPositionZ=-20
