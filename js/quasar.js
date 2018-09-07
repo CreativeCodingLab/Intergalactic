@@ -76,12 +76,16 @@ function loadGalaxyData(callback) {
 	});
 }
 
+function roundtothree(s, round = true) {
+	// FIXME: must agree with rounding to 3 digits during file generation
+	let v = parseFloat(s)
+	return round ? Math.round(1000 * v) / 1000.0 : v
+	
+}
+
 function loadSkewerData(callback) {
-	function f(s, round = true) {
-		// FIXME: must agree with rounding to 3 digits during file generation
-		let v = parseFloat(s)
-		return round ? Math.round(1000 * v) / 1000.0 : v
-	}
+	
+	let f = roundtothree
 
 	d3.dsv(' ', 'data/qsoInSdssSlice_partial_cartesian_norm.dat', (d) => {
 		return { // name x1 y1 z1 x2 y2 z2
@@ -125,7 +129,7 @@ function loadSkewerData(callback) {
 }
 
 let computeProjections = () => {
-	console.log('loaded so far:', skewerData.length, galaxies.length)
+	// console.log('loaded so far:', skewerData.length, galaxies.length)
 	// TODO: progress bar for large datasets
 
 	skewer.forEach( (k) => {
@@ -138,7 +142,7 @@ let computeProjections = () => {
 		}) // maintain array alignment w/o wasting memory
 		   // FIXME: bind max range in dat.gui
 
-		console.log(u, k, ret.map(u => u[1])) // a few skewers are far from everything
+		// console.log(u, k, ret.map(u => u[1])) // a few skewers are far from everything
 		projections.push(ret)
 	})
 }
@@ -180,7 +184,7 @@ function onMouseMove( event ) {
 	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
 	raycaster.setFromCamera( mouse, camera );
-
+	
 	// calculate objects intersecting the picking ray
 	// FIXME: do linked brushing from the neighbors plot.
 	
@@ -193,6 +197,7 @@ function onMouseMove( event ) {
 		// greedy fuzzy select?
 		if (p.object.type == "Points" && p.distanceToRay < 0.2) {
 			pointOverIdx = p.index;
+			plotGalaxyImage(pointOverIdx);
 			break;
 		}
 	}
@@ -209,8 +214,6 @@ function onMouseMove( event ) {
 		prevPointOverIdx = pointOverIdx;
 		boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
 
-		//console.log(galaxies[pointOverIdx]);
-
 	}
 	if (pointOverIdx < 0 && prevPointOverIdx >= 0) {
 		// mouse isn't over a point anymore
@@ -219,11 +222,10 @@ function onMouseMove( event ) {
 		for (var p = 0; p < cs.length; p++) {
 			cs[p] = 0.0;
 		}
-
 		prevPointOverIdx = -1;
 		boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+		
 	}
-
 
 	//intersect with skewers
 	intersects = raycaster.intersectObjects( cylinderGroup.children );
@@ -286,6 +288,46 @@ function plotSkewerSpectra(x,y) {
 	})
 		// ({value: v}) => pen(v)
 		// ({key: k}) => k == 'HI' ? 'white' : k == 'CIV' ? 'blue' : 'red'
+}
+
+function plotGalaxyImage(ptIndex){
+
+	var g = galaxies[ptIndex]
+	//g.NSAID
+
+	let f = roundtothree
+	x = f(g.position.x,true)
+	y = f(g.position.y,true)
+	z = f(g.position.z,true)
+
+	var NSAID = 'NSAID: ' + g.NSAID;
+	var pos = 'position: x = ' + x + ', y = ' + y + ', z = ' + z;
+	var rs = 'redshift: ' + g.redshift;
+	var lssfr = 'log_sSFR:' + g.log_sSFR;
+
+	//TO DO: float over to bottom right
+	//TO DO: update image for new galaxy
+	
+	var svg = d3.select('#galaxyImage')
+	
+	svg.select('div').remove()
+	var galaxyImage = svg.append('div')
+	galaxyImage.append('img')
+		.attr('src', 'data/galaxyImages_partial/'+g.NSAID+'_'+x+'_'+y+'_'+z+'.jpg')
+		.attr('width', 200)
+		.attr('height', 200)
+	galaxyImage.append("text")
+		.text(function (d) { return NSAID; })
+	galaxyImage.append("text")
+		.text(function (d) { return '\n' + pos + '\n'; });
+	galaxyImage.append("text")
+		.text(function (d) { return rs + '\n'; });
+	galaxyImage.append("text")
+		.text(function (d) { return lssfr + '\n'; });
+	//galaxyImage.append('rect')
+	//	.attr("width", 200)
+	//	.attr("height", 200);
+	
 }
 
 function plotSkewerNeighbors() {
@@ -459,7 +501,6 @@ function processGalaxyData(data) {
 	var visibles = new Float32Array( n * 1 );
 	var sizes = new Float32Array( n );
 
-	var vertex = new THREE.Vector3();
 	// var color = new THREE.Color( 0xffffff );
 
 	for ( var i = 0; i < n; ++i ) {
@@ -469,7 +510,10 @@ function processGalaxyData(data) {
 		let u = data[i];
 		var id = u.NSAID;
 
-		vertex = u.position.multiplyScalar(boxRadius)
+		
+
+		var vertex = u.position.clone()
+		vertex.multiplyScalar(boxRadius)
 		vertex.toArray( positions, i * 3 );
 
 		colors[i] = u.color == "red" ? 0 :
