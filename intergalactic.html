@@ -20,12 +20,19 @@
 				float: left;
 			}
 			#details {
-				width: 50%;
+				width: 600 px;
 				float: right;
 				top: 3px;
+				display: flex;
+    			align-items: right;
 
 			}
-
+			#graph{
+				width: 600px;
+			}
+			#container{
+				transform: translate(-300px);
+			}
 			#info {
 				color: #fff;
 				position: absolute;
@@ -38,8 +45,17 @@
 				height: 200px;
 				width: 200px;
 				position: fixed;
-  				bottom: 80px;
+  				bottom: 10px;
   				right: 10px;
+				float:right;
+				  
+			}
+			#galaxyDesc {
+				display: block;
+				position: fixed;
+				float: left;
+				bottom: 10px;
+  				right: 250px;
 			}
 			a { color: #ff0000 }
 		</style>
@@ -51,6 +67,7 @@
 		<div style="position: fixed; top: 0; left: 0; right: 0;">
 			<div id="details">
 				<svg id="graph"></svg>
+				<div id="galaxyDesc"></div>
 				<div id="galaxyImage"></div>
 			</div>
 		</div>

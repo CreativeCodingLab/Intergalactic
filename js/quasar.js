@@ -21,6 +21,11 @@ var loader = new THREE.FileLoader();
 var optionFile = 'options.txt';
 // var currentFile = optionFile;
 
+
+//sets the size of the space on the right side of the screen
+var column_width = 600;
+
+
 var galaxyFile, skewerFile;
 var galaxyRvirScalar = 0.5;
 // var skewerWidth = 0.06;
@@ -46,7 +51,7 @@ var cylOverIdx = -1;
 var prevCylOverIdx = -1;
 
 
-let graphWidth = window.innerWidth/2 - 50, graphHeight = 200; // FIXME: ew, globals
+let graphWidth = 600, graphHeight = 200; // FIXME: ew, globals
 let graph = initGraph();
 
 let xScale = d3.scaleLinear().domain([.5, .9]).range([0, graphWidth]),
@@ -197,7 +202,7 @@ function onMouseMove( event ) {
 	// calculate mouse position in normalized device coordinates
 	// (-1 to +1) for both components
 
-	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.x = ( event.clientX / (window.innerWidth-column_width) ) * 2 - 1;
 	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
 	raycaster.setFromCamera( mouse, camera );
@@ -253,10 +258,8 @@ function plotSkewerSpectra(x,y) {
 	let k = skewer[cylOverIdx],
 		spectra = d3.entries(skewerData.get(k));
 	// let spectra = d3.entries(u.absorptionData);
-
-	let pen = d3.line()
-				.x((d) => x(d.dist_scaled)) // NOT camelcase
-				.y((d) => y(d.flux_norm));
+	
+	
 	// let graph = d3.select('#graph').select('g')
 
 	// fresh axes rendering x(), y()
@@ -276,8 +279,12 @@ function plotSkewerSpectra(x,y) {
 
 	// update plot with all absorption data for this skewer
 
+	
 	graph.selectAll('.pen').remove()
 	spectra.forEach((u) => {
+		let pen = d3.line()
+			.x((d) => x(d.dist_scaled)) // NOT camelcase
+			.y((d) => y(d.flux_norm));
 		graph.append('path')
 			.attr('class', 'pen')
 			.datum(u.value)
@@ -307,22 +314,30 @@ function plotGalaxyImage(){
 	//TO DO: float over to bottom right
 	//TO DO: update image for new galaxy
 	
+	var txt = d3.select('#galaxyDesc')
+	
 	var svg = d3.select('#galaxyImage')
 	
+	txt.select('div').remove()
 	svg.select('div').remove()
+	
+	var galaxyDesc = txt.append('div')
+	galaxyDesc.append("p")
+		.text(function (d) { return NSAID; })
+	galaxyDesc.append("p")
+		.text(function (d) { return '\n' + pos + '\n'; });
+	galaxyDesc.append("p")
+		.text(function (d) { return rs + '\n'; });
+	galaxyDesc.append("p")
+		.text(function (d) { return lssfr + '\n'; });
+
+
 	var galaxyImage = svg.append('div')
 	galaxyImage.append('img')
 		.attr('src', 'data/galaxyImages_partial/'+g.NSAID+'_'+x+'_'+y+'_'+z+'.jpg')
 		.attr('width', 200)
 		.attr('height', 200)
-	galaxyImage.append("text")
-		.text(function (d) { return NSAID; })
-	galaxyImage.append("text")
-		.text(function (d) { return '\n' + pos + '\n'; });
-	galaxyImage.append("text")
-		.text(function (d) { return rs + '\n'; });
-	galaxyImage.append("text")
-		.text(function (d) { return lssfr + '\n'; });
+
 	//galaxyImage.append('rect')
 	//	.attr("width", 200)
 	//	.attr("height", 200);
@@ -609,8 +624,11 @@ function plotSkewer(name, startPoint, endPoint){
 	var cylGeom = new THREE.CylinderBufferGeometry(skewerWidth, skewerWidth, cylLength, 32, 1, true);
 	cylGeom.translate(0, cylLength / 2, 0);
 	cylGeom.rotateX(Math.PI / 2);
-
-	// cylMaterialFront.uniforms.texture.value = createAbsorptionDataTexture(absorptionData);
+	
+	let k = skewer[cylOverIdx],
+		absorptionData = d3.entries(skewerData.get(k));
+	//console.log(absorptionData)
+	//cylMaterialFront.uniforms.texture.value = createAbsorptionDataTexture(absorptionData);
 		//**this may reset the color textures(Delete After Testing)
 	var cyl = new THREE.Mesh(cylGeom, cylMaterialFront);
 
@@ -652,6 +670,7 @@ function plotSkewer(name, startPoint, endPoint){
 	}
 }
 
+/*
 function recreate_Skewers(){
 	scene.remove(cylinderGroup); // taking out all the skewers
 
@@ -664,35 +683,14 @@ function recreate_Skewers(){
 							d.end.clone().multiplyScalar(boxRadius))
 	})
 	scene.add( cylinderGroup );
-
-	/* loader.load(
-		skewerList,
-
-		function(data){
-			var rows = data.split("\n");
-			for(var i = 1; i < rows.length - 1; i++){
-				loader.load(
-					rows[i],
-					onLoadSkewer(rows[i], plotSkewer),
-
-					// console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
-					function ( xhr ) {},
-					function ( err ) { console.error( 'An error happened' ); }
-				)
-			}
-
-			scene.add( cylinderGroup );
-		},
-		function( xhr ){},
-		function( err ){ console.error( 'An error happened');}
-	); */
 }
+*/
 
 function init() {
 
 	renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio( window.devicePixelRatio );
-	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.setSize( window.innerWidth-column_width, window.innerHeight );
 
 	camera = new THREE.PerspectiveCamera(
 		20 /* fov */, window.innerWidth / window.innerHeight /* aspect */,
@@ -716,6 +714,7 @@ function init() {
 
 	var container = document.getElementById( 'container' );
 	container.appendChild( renderer.domElement );
+
 
 	window.addEventListener( 'resize', onWindowResize, false );
 	window.addEventListener( 'mousemove', onMouseMove, false );
@@ -815,14 +814,14 @@ function displayGui(){
 		textGroup.visible = !textGroup.visible;
 	});*/
 
-	skewerWidthChange.onFinishChange(function(value){
+	/*skewerWidthChange.onFinishChange(function(value){
 		//console.log(cylinderGroup);
 		//console.log("skewerWidthChange");
 		skewerWidth = value;
 		recreate_Skewers();
 
 	});
-
+	*/
 	/* skewerMinAbs.onChange(function(value){
 		//console.log(value);
 		skewerAbsorptionMinHSL = "rgb("+Math.round(value[0])+" ,"+Math.round(value[1])+" ,"+Math.round(value[2])+")";
@@ -867,7 +866,7 @@ function onWindowResize() {
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
 
-	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.setSize( window.innerWidth-column_width, window.innerHeight );
 
 }
 
@@ -941,7 +940,7 @@ function createDataTexture() {
 }
 */
 
-/* function createAbsorptionDataTexture(absorptionData) {
+function createAbsorptionDataTexture(absorptionData) {
 	// create a buffer with color data
 
 	var resY = absorptionData.length - 1;
@@ -990,4 +989,4 @@ function createDataTexture() {
 	texture.needsUpdate = true; // just a weird thing that Three.js wants you to do after you set the data for the texture
 
 	return texture;
-} */
+}
