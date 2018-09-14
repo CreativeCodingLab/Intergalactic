@@ -1,30 +1,23 @@
-
-var sceneReady = false;
-
+// instantiate once
 var renderer, scene, camera, controls;
 var gui, guiParams;
 
-var boxOfPoints;
-var cylinderGroup, textGroup;
+var boxOfPoints; // parallel to 'galaxies'
+var cylinderGroup, // parallel to 'skewer'
+	cylinderBackGroup,
+	textGroup;
 
+// load once from files
 var galaxies = [];
 var skewer = [];
 var skewerData = new Map();
 
-// var allAbsorptionRates = []; // should be kept in same sorted order as skewers array.
-							 // aka allAbsorptionRates[i] should belong to cylinderGroup.children[i] and skewers[i]
-
 var tex1 = new THREE.TextureLoader().load( "blur.png" );
-var loader = new THREE.FileLoader();
+// var loader = new THREE.FileLoader();
 
-//defaults - values can be changed here, or loaded in from options.txt
 var optionFile = 'options.txt';
-// var currentFile = optionFile;
 
-
-
-
-
+// mutable params
 var galaxyFile, skewerFile;
 var galaxyRvirScalar = 0.5;
 // var skewerWidth = 0.06;
@@ -35,9 +28,13 @@ var galaxyBlueHSL = "hsl(200, 70%, 50%)";
 var showLabels = true;
 var cameraFocalPoint = new THREE.Vector3(0,0,0);
 
+// immutable params
 var boxRadius = 30;
 var skewerLinearFiltering = false;
 
+
+// internal mutables - pass as arguments, avoid direct use.
+var filterDistantGalaxies = true;
 var distanceFromSkewer = 6.0;
 	// Determines a distance for toggling on and off galaxies near Skewers
 
@@ -51,10 +48,17 @@ var prevCylOverIdx = -1;
 
 //sets the size of the space on the right side of the screen
 var column_width = self.innerWidth/3;
-let graphWidth = column_width, graphHeight = 200; // FIXME: ew, globals
-let graph = initGraph();
+let graphWidth = column_width, graphHeight = 200; // TODO: regenerate dependent values
+let depthDomain = [.5, .9];
 
+// initialization
+let graph = createGraph();
 
+let xScale = () => d3.scaleLinear().domain(depthDomain).range([0, graphWidth]),
+	yScale = () => d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
+
+init();
+animate();
 
 // TODO: attach dat.gui to scales?
 // FIXME: load from files specified in
@@ -158,20 +162,20 @@ function onKeyDown(event) {
     var keyChar = String.fromCharCode(event.keyCode);
 
     if ( keyChar  == 'S') {
-	    cylinderGroup.visible = !cylinderGroup.visible;
+		cylinderGroup.visible = !cylinderGroup.visible;
+		cylinderBackGroup.visible = !cylinderBackGroup.visible;
 
     } else if ( keyChar  == 'T') {
 	    textGroup.visible = !textGroup.visible;
 
-    } else if ( keyChar  == 'G') {
+	} /* else if ( keyChar  == 'G') {
 	    for (var g = 0; g < galaxies.length; g++) {
 		var galaxy = galaxies[g];
 		galaxy.isVisible = true;
 		boxOfPoints.geometry.attributes.isVisible.array[g] = 1.0;
 		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
-	    }
-
-    } else if ( keyChar == 'N') {
+		}
+    }*/ else if ( keyChar == 'N') {
 	    toggleGalaxiesNearSkewers(); // skewers, distanceFromSkewer
     }
 };
@@ -185,7 +189,6 @@ function selectPoint() {
 	prevPointOverIdx = pointOverIdx;
 	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
 }
-
 function unselectPoint() {
 	var cs = boxOfPoints.geometry.attributes.isSelected.array;
 		for (var p = 0; p < cs.length; p++) {
@@ -193,6 +196,20 @@ function unselectPoint() {
 		}
 		prevPointOverIdx = -1;
 		boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+}
+
+// WIP - pass bool attribute to fragment shader of each cylinder?
+function selectSkewer() {
+	let cyl = cylinderGroup.children[cylOverIdx]
+	cyl.geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
+	cyl.geometry.attributes.isSelected.needsUpdate = true;
+}
+function unselectSkewer() {
+	let cyl = cylinderGroup.children[prevCylOverIdx]
+	if (cyl) {
+		cyl.geometry.attributes.isSelected.set(Array(192).fill(0.0))
+		cyl.geometry.attributes.isSelected.needsUpdate = true;
+	}
 }
 
 function onMouseMove( event ) {
@@ -223,6 +240,11 @@ function onMouseMove( event ) {
 	if (pointOverIdx >= 0 && pointOverIdx != prevPointOverIdx) {
 		// mouse is over new point; show galaxy details
 		selectPoint();
+		// graph.select(`#g${prevPointOverIdx}`) // doesn't work.
+			// .attr('fill', 'lightblue')
+		graph.select(`#g${pointOverIdx}`)
+			.attr('fill', 'red')
+
 		plotGalaxyImage(); // fire once for each new hover
 	}
 	if (pointOverIdx < 0 && prevPointOverIdx >= 0) {
@@ -248,27 +270,24 @@ function onMouseMove( event ) {
 	}
 
 	if (cylOverIdx > -1 && cylOverIdx != prevCylOverIdx) {
-		let xScale = d3.scaleLinear().domain([.5, .9]).range([0, graphWidth]),
-			yScale = d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
-		plotSkewerSpectra(xScale, yScale);
-		plotSkewerNeighbors(xScale);
+		unselectSkewer()
+		selectSkewer()
+
+		plotSkewerSpectra();
+		plotSkewerNeighbors();
 	}
 }
 
-function plotSkewerSpectra(x,y) {
+function plotSkewerSpectra() {
+	let i = cylOverIdx;
+	if (i == -1) i = prevCylOverIdx;
 
-	let k = skewer[cylOverIdx],
+	let k = skewer[i],
 		spectra = d3.entries(skewerData.get(k));
+	let x = xScale(), y = yScale();
 
-
-	// let spectra = d3.entries(u.absorptionData);
-
-	//determine number of graphs to be generated
+	//TODO:determine number of graphs to be generated
 	//may need to be updated if data for other absorption spectra are given
-
-
-
-	//console.log(spectra)
 
 	// let graph = d3.select('#graph').select('g')
 
@@ -292,7 +311,7 @@ function plotSkewerSpectra(x,y) {
 
 	graph.selectAll('.pen').remove()
 	spectra.forEach((u) => {
-		console.log(u)
+		// console.log(u)
 		let pen = d3.line()
 			.x((d) => x(d.dist_scaled)) // NOT camelcase
 			.y((d) => y(d.flux_norm));
@@ -358,9 +377,10 @@ function plotGalaxyImage(){
 
 }
 
-function plotSkewerNeighbors(xScale) {
+function plotSkewerNeighbors() {
 	// let u = skewers[cylOverIdx];
-	let i = prevCylOverIdx;
+	let i = cylOverIdx;
+	if (i == -1) i = prevCylOverIdx;
 	if (i == -1) return;
 
 	let k = skewer[i], v = skewerData.get(k),
@@ -380,14 +400,14 @@ function plotSkewerNeighbors(xScale) {
 
 			// if (pointOverIdx == j) // boxOfPoints and galaxies not aligned?
 
-			graph.append('rect')
+			graph.append('rect').attr('id', 'g'+j)
 				.attr('class', 'mark')
-				.attr('x', xScale(distAlong)) // FIXME: I don't believe these...
+				.attr('x', xScale()(distAlong)) // FIXME: I don't believe these...
 				.attr('y', graphHeight/2 - halfSize)
 				// yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
 				.attr('width', 1)
 				.attr('height', 2*halfSize)
-				.attr('fill', pointOverIdx == j ? 'red' : 'lightblue')
+				.attr('fill', 'lightblue')
 				.attr('opacity', 1 / (30*dist + 1))
 
 				.datum(j)
@@ -400,7 +420,8 @@ function plotSkewerNeighbors(xScale) {
 	}
 }
 
-function initGraph() {
+function createGraph() {
+	// TODO: compass mode
 	let graph = d3.select('#graph')
 					.attr("width", graphWidth + 50)
 					.attr("height", graphHeight + 50)
@@ -413,6 +434,7 @@ function initGraph() {
 		.attr('fill', 'black')
 		.attr('opacity', .5)
 
+	// annotations
 	graph.append('g').attr('class', 'xaxis')
 		.attr('transform', 'translate(0,'+graphHeight+')')
 		.attr('stroke', 'white')
@@ -424,13 +446,129 @@ function initGraph() {
 		.attr('text-anchor', 'middle')
 		.attr('fill', 'white')
 
+	// modifiers
+	createSlider()
+	createBrush()
+
 	// let trace = graph.selectAll('.pen')
 		 			 // .data(data) // FIXME
 	return graph // [graph, trace]
 }
 
-init();
-animate();
+function createSlider() {
+	let width = 400, pad = 20
+	let svg = d3.select('#neighbor-slider')
+	svg.attr('width', width).attr('height', 30)
+
+	svg.append('rect').attr('class', 'slider-track')
+		.attr('x', pad).attr('y', 12.5)
+		.attr('width', width - 2*pad).attr('height', 5)
+		.style('fill', 'gray')
+		/* .on('click', () => {
+			apply(d3.event.x) // WIP - needs context of the slider handle.
+		}) */
+		
+	let scale = d3.scaleLinear()
+		.range([pad, width - pad])
+		.domain([0.0, 6.0])
+		.clamp(true);
+		
+	let drag = d3.drag()
+		.on('drag', function() { 
+			if (d3.event.dx === 0) { return; }
+			let x = d3.event.x;
+			x = x < pad ? pad : x > width-pad ? width-pad : x
+			
+			d3.select(this)
+				.attr('cx', x);
+			let value = scale.copy().invert(x);
+			distanceFromSkewer = value
+			if (filterDistantGalaxies) {
+				filterGalaxiesNearSkewers()
+			}
+			plotSkewerNeighbors();
+		})
+	
+	svg.append('g') // d3.event wants to be relative to a group
+		.append('circle').attr('class', 'slider-handle')
+		.attr('cx', width - pad)
+		.attr('cy', 15).attr('r', 10)
+		.style('fill', 'black')
+		.style('stroke', 'gray')
+		.style('stroke-width', 2.5)
+		.call(drag)
+		.on('dblclick', () => {
+			toggleGalaxiesNearSkewers()
+			svg.select('.slider-handle')
+				.style('fill', () => filterDistantGalaxies ? 'black' : 'white')
+		})
+}
+
+function createBrush() {
+	// https://github.com/CreativeCodingLab/DynamicInfluenceNetworks/blob/master/src/js/focusSlider.js
+	let svg = d3.select('#depth-brush')
+
+	let margin = {top: 5, left: 50, bottom: 20, right: 20};
+	let axis = svg.append('g');
+
+	let brush = svg.append("g")
+		.attr("class", "brush");
+
+	let width = 0, height = 0
+	let x = d3.scaleLinear()
+	.domain(depthDomain)
+	.range([margin.left, width - 1]);
+	
+	resize();
+	drawBrush();
+
+	function resize() {
+		var w = 400 - margin.right;
+		var h = 60;
+		
+		var aspect = w / h;
+		var vw = 280;
+		var vh = vw / aspect;
+
+		width = vw;
+		height = vh - margin.bottom;
+
+		svg //.style("font-size", "12px")
+			.attr('width', w).attr('height', h)
+			.attr("viewBox", "0 0 " + vw + " " + vh)
+
+		x.range([margin.left, width - margin.right]);
+		
+		axis.attr('transform', 'translate(0,' + height + ')')
+			.call(d3.axisBottom(x))
+	}
+	
+	function drawBrush() {
+		if (!x) { return; }
+		let brusher = d3.brushX()
+			.extent([[margin.left, 0], [width - margin.right, height]])
+			.on("brush end", brushed);
+		
+		brush.call(brusher)
+			.call(brusher.move, x.range());
+	}
+	
+	function brushed() {
+		var s = d3.event.selection || x.range();
+		ret = s.map(x.invert, x);
+		if (ret[0] !== ret[1]) {
+			depthDomain[0] = ret[0]
+			depthDomain[1] = ret[1]
+
+			if (prevCylOverIdx !== -1) {
+				plotSkewerSpectra()
+				plotSkewerNeighbors()
+			}
+		}
+		// domain[0] = Math.round(domain[0]);
+		// domain[1] = Math.round(domain[1]);
+	}
+}
 
 
 function processOptions(callback) {
@@ -492,8 +630,6 @@ function processGalaxyData(data) {
 
 		let u = data[i];
 		var id = u.NSAID;
-
-
 
 		var vertex = u.position.clone()
 		vertex.multiplyScalar(boxRadius)
@@ -570,8 +706,7 @@ function processGalaxyData(data) {
 	}
 }
 
-
-function toggleGalaxiesNearSkewers() {
+function filterGalaxiesNearSkewers() {
 	//turn off all stars, then go through the selected skewers and turn on ones that < maxDistance from it
 
 	for (var g = 0; g < galaxies.length; g++)
@@ -589,7 +724,18 @@ function toggleGalaxiesNearSkewers() {
 	}
 
 }
-
+function unfilterGalaxiesNearSkewers() {
+	for (var g = 0; g < galaxies.length; g++)
+		boxOfPoints.geometry.attributes.isVisible.array[ g ] = 1.0;
+	boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
+}
+function toggleGalaxiesNearSkewers() {
+	filterDistantGalaxies = !filterDistantGalaxies
+	if (filterDistantGalaxies)
+		filterGalaxiesNearSkewers()
+	else
+		unfilterGalaxiesNearSkewers()
+}
 
 
 function plotSkewer(name, startPoint, endPoint){
@@ -644,6 +790,7 @@ function plotSkewer(name, startPoint, endPoint){
 	//console.log(absorptionData)
 	//cylMaterialFront.uniforms.texture.value = createAbsorptionDataTexture(absorptionData);
 		//**this may reset the color textures(Delete After Testing)
+	cylGeom.addAttribute( 'isSelected', new THREE.BufferAttribute( new Float32Array(32*6).fill(0.0), 1 ) )
 	var cyl = new THREE.Mesh(cylGeom, cylMaterialFront);
 
 	cyl.position.copy(startPoint);
@@ -656,7 +803,7 @@ function plotSkewer(name, startPoint, endPoint){
 	cyl2.lookAt(endPoint);
 
 	cylinderGroup.add(cyl);
-	scene.add( cyl2 ); // DO NOT add to cylinderGroup - won't be aligned with skewers data.
+	cylinderBackGroup.add( cyl2 ); // do not also add to cylinderGroup - won't be aligned with skewers data.
 
 	// console.log(cyl, cyl2);
 
@@ -714,8 +861,10 @@ function init() {
 	scene = new THREE.Scene();
 
 	cylinderGroup = new THREE.Group();
+	cylinderBackGroup = new THREE.Group();
 	textGroup = new THREE.Group();
 	scene.add( cylinderGroup );
+	scene.add( cylinderBackGroup );
 	scene.add( textGroup );
 
 	processOptions(() => { // need parameters to load first
@@ -756,17 +905,21 @@ function displayGui(){
 		galRvirScal: galaxyRvirScalar,
 		galRedHSL: [galRed.r * 255, galRed.g * 255, galRed.b * 255],
 		galBlueHSL: [galBlue.r * 255, galBlue.g * 255, galBlue.b * 255],
-		skewerWid: skewerWidth,
+		skewerWidth: skewerWidth,
 		skewerAbsorMinHSL: [skewMinHSL.r * 255, skewMinHSL.g * 255, skewMinHSL.b * 255],
 		skewerAbsorMaxHSL: [skewMaxHSL.r * 255, skewMaxHSL.g * 255, skewMaxHSL.b * 255],
-		skewersVisible: function(){cylinderGroup.visible = !cylinderGroup.visible;},
+		
+		skewersVisible: function(){
+			cylinderGroup.visible = !cylinderGroup.visible;
+			cylinderBackGroup.visible = !cylinderBackGroup.visible;
+		},
 		textVisible: function(){textGroup.visible = !textGroup.visible;},
 	}
 
 	//Galaxies Options-----
 	var galaxyFolder = gui.addFolder('Galaxies');
-	var galNearSkew =      galaxyFolder.add(guiParams, "galNearSkewer").name("Galaxies Close to Skewers");
-	var galRangeNearSkew = galaxyFolder.add(guiParams, "galDist2Skewer", 0.01, 6).name("Range From Skewer");
+	// var galNearSkew =      galaxyFolder.add(guiParams, "galNearSkewer").name("Galaxies Close to Skewers");
+	// var galRangeNearSkew = galaxyFolder.add(guiParams, "galDist2Skewer", 0.01, 6).name("Range From Skewer");
 	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", 0, 1).name("Rvir Scalar");
 	var galaxyRed  = galaxyFolder.addColor(guiParams, "galRedHSL").name("Red Value");
 	var galaxyBlue = galaxyFolder.addColor(guiParams, "galBlueHSL").name("Blue Value");
@@ -775,16 +928,16 @@ function displayGui(){
 	var skewerFolder = gui.addFolder("Skewers");
 	var skewerVis = skewerFolder.add(guiParams, "skewersVisible").name("Toggle Skewer Visibility");
 	var textVis =   skewerFolder.add(guiParams, "textVisible").name("Toggle Text Visibility");
-	var skewerWidthChange = skewerFolder.add(guiParams, "skewerWid", 0.0, 0.5).step(0.01).name("Width");
+	var skewerWidthChange = skewerFolder.add(guiParams, "skewerWidth", 0.0, 0.5).step(0.01).name("Width");
 	var skewerMinAbs = skewerFolder.addColor(guiParams, "skewerAbsorMinHSL").name("Minimum Absorption");
 	var skewerMaxAbs = skewerFolder.addColor(guiParams, "skewerAbsorMaxHSL").name("Maximum Absorption");
 
 
 	//Functions to update the galaxy parameters in the scene------
-	galNearSkew.onChange(function(value){
-		if(value){
-			toggleGalaxiesNearSkewers();
-		}else{
+	/*  galNearSkew.onChange(function(value){
+		if (value) {
+			filterGalaxiesNearSkewers();
+		} else {
 			for (var g = 0; g < galaxies.length; g++) {
 				var galaxy = galaxies[g];
 				galaxy.isVisible = true;
@@ -796,11 +949,11 @@ function displayGui(){
 
 	galRangeNearSkew.onChange(function(value){
 		distanceFromSkewer = value;
-		if(guiParams.galNearSkewer){
-			toggleGalaxiesNearSkewers();
+		if (guiParams.galNearSkewer) {
+			filterGalaxiesNearSkewers();
 		}
-		plotSkewerNeighbors(xScale); // not until performance improves! (TODO: caching)
-	});
+		plotSkewerNeighbors(xScale);
+	}); */
 
 	galaxyRvirSc.onChange(function(value){
 		//console.log(value);
@@ -814,19 +967,6 @@ function displayGui(){
 	galaxyBlue.onChange(function(value){
 		boxOfPoints.material.uniforms.blueColor.value = new THREE.Color(value[0]/255, value[1]/255, value[2]/255);
 	});
-
-
-	//Functions to update skewer parameters in the scene-------
-
-	/*THE FUNCTIONS FOR THESE TWO OPTIONS HAS BEEN MOVED INTO THE OPTIONS
-	skewerVis.onChange(function(value){
-		cylinderGroup.visible = !cylinderGroup.visible;
-	});
-
-	textVis.onChange(function(value){
-		console.log(textGroup.visible);
-		textGroup.visible = !textGroup.visible;
-	});*/
 
 	/*skewerWidthChange.onFinishChange(function(value){
 		//console.log(cylinderGroup);
@@ -852,8 +992,6 @@ function displayGui(){
 		}
 	}); */
 
-
-
 	galaxyFolder.open();
 	skewerFolder.open();
 	gui.close();
@@ -863,7 +1001,7 @@ function displayGui(){
 	let orbitOff = () => {controls.enabled = false; controls.update()},
 		orbitOn = () => {controls.enabled = true; controls.update()};
 
-	['dat-gui', 'graph'].forEach( (id) => {
+	['dat-gui', 'details', /*'graph'*/].forEach( (id) => {
 		let dg = document.getElementById(id)
 		dg.onmouseover = orbitOff
 		dg.onmouseout = orbitOn
