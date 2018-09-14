@@ -101,8 +101,7 @@ function loadSkewerData(callback) {
 	}).then( (data) => {
 		data.forEach( (d) => {
 			skewer.push(d.name)
-			let file = [d.name, '', d.start.x, d.start.y, d.start.z,
-								'', d.end.x, d.end.y, d.end.z].join('_') + '.dat'
+			let file = d.name + '.dat'
 			let spectra = ['HI', 'CIV']
 			skewerData.set(d.name, {
 				'start': d.start,
@@ -113,7 +112,7 @@ function loadSkewerData(callback) {
 
 			// individual reads of each element
 			spectra.forEach( (el) => {
-				let path = 'data/spectra_' + el + '_partial_norm/'
+				let path = 'data/spectra_' + el + '_norm/'
 
 				d3.dsv(' ', path + file, (dee) => {
 					// x y z dist_scaled dist_frac flux_norm
@@ -920,7 +919,7 @@ function displayGui(){
 	var galaxyFolder = gui.addFolder('Galaxies');
 	// var galNearSkew =      galaxyFolder.add(guiParams, "galNearSkewer").name("Galaxies Close to Skewers");
 	// var galRangeNearSkew = galaxyFolder.add(guiParams, "galDist2Skewer", 0.01, 6).name("Range From Skewer");
-	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", 0, 1).name("Rvir Scalar");
+	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", .2, 5).name("Rvir Scalar");
 	var galaxyRed  = galaxyFolder.addColor(guiParams, "galRedHSL").name("Red Value");
 	var galaxyBlue = galaxyFolder.addColor(guiParams, "galBlueHSL").name("Blue Value");
 
