@@ -64,14 +64,16 @@ animate();
 // FIXME: load from files specified in
 
 function loadGalaxyData(callback) {
-	d3.dsv(" ", galaxyFile, (d) => {
+	d3.dsv(" ", galaxyFile, (d) => {	
 		return {
 			'NSAID': d.NSAID,
-			'position': new THREE.Vector3(parseFloat(d.x), parseFloat(d.y), parseFloat(d.z)),
+			//'position': new THREE.Vector3(parseFloat(d.x), parseFloat(d.y), parseFloat(d.z)),
 			'rvir': d.rvir,
 			'redshift': d.redshift,
 			'log_sSFR': d.log_sSFR,
-			'color': d.color
+			'color': d.color,
+			'RA': d.RA,
+			'DEC': d.DEC
 		}
 	}).then((data) => {
 		processGalaxyData(data);
@@ -83,8 +85,9 @@ function loadGalaxyData(callback) {
 
 function roundtothree(s, round = true) {
 	// FIXME: must agree with rounding to 3 digits during file generation
-	return +parseFloat(s).toFixed(3)
-	// return round ? Math.round(1000 * v) / 1000.0 : v
+	// return +parseFloat(s).toFixed(3)
+	let v = parseFloat(s)
+	return round ? Math.round(1000 * v) / 1000.0 : v
 }
 
 function loadSkewerData(callback) {
@@ -289,13 +292,13 @@ function plotSkewerSpectra() {
 		spectra = d3.entries(skewerData.get(k));
 	let x = xScale(), y = yScale();
 
-	let relX = x
+	// let relX = x
 	if (pointOverIdx != -1) {
 		let j = pointOverIdx,
 			u = galaxies[j]
 
-		let [a,b] = x.domain()
-		relX = x.copy().domain([a - u.position.z, b - u.position.z]) // WIP
+		// let [a,b] = x.domain()
+		// relX = x.copy().domain([a - u.position.z, b - u.position.z]) // WIP
 
 		graph.select('.center-mark').remove()
 		graph.append('rect').attr('class', 'center-mark')
@@ -311,7 +314,7 @@ function plotSkewerSpectra() {
 
 	// fresh axes rendering x(), y()
 	graph.select('.xaxis')
-		.call(d3.axisBottom(x))
+		.call(d3.axisBottom(x)) // relX
 		.selectAll('text')
 			.attr('stroke', 'none')
 			.attr('fill', 'white');
@@ -655,8 +658,28 @@ function processGalaxyData(data) {
 
 		let u = data[i];
 		var id = u.NSAID;
+		var phi = u.RA * (Math.PI/180)
+		var theta = u.DEC * (Math.PI/180)
+		var r = u.redshift
+		
+		var sph_pos = new THREE.Spherical(u.redshift,theta,phi)
+			//Spherical( radius : Float, phi POLAR : Float, theta EQUATOR : Float )
+			//PHI AND THETA ARE SWAPPED (physics vs math notation)
+		//console.log(sph_pos)
+		
 
-		var vertex = u.position.clone()
+		
+		var x = r*Math.sin(sph_pos.theta)*Math.cos(sph_pos.phi)
+		var y = r*Math.sin(sph_pos.theta)*Math.sin(sph_pos.phi)
+		var z = r*Math.cos(sph_pos.theta)
+
+		var cart_pos = new THREE.Vector3(x,y,z)
+		console.log(cart_pos)
+		var vertex = cart_pos.clone()
+
+		//var vertex = u.position.clone();
+		//vertex.setFromSpherical(position)
+		
 		vertex.multiplyScalar(boxRadius)
 		vertex.toArray( positions, i * 3 );
 
@@ -1064,7 +1087,7 @@ function createAbsorptionDataTexture(name) {
 		c = cylinderGroup.children[skewer.indexOf(name)];
 		// FIXME: unnecessary O(n) per skewer, once
 
-	if (!v || !v.HI) {
+	/* if (!v || !v.HI) {
 		var defaultMat = new THREE.ShaderMaterial( {
 	
 			uniforms: {
@@ -1078,14 +1101,14 @@ function createAbsorptionDataTexture(name) {
 			//blending:       THREE.AdditiveBlending,
 			depthTest:      true,
 			transparent:    false,
-			side:		THREE.BackSide
+			side:		THREE.FrontSide 
 	
 		});
 		// var data = new Uint8Array([255, 255, 255, 255]);
 
 		c.material = defaultMat // VERIFY
-	}
-	else {
+	} */
+	if (v && v.HI) {
 		let absorptionData = skewerData.get(name).HI.map(u => u.flux_norm)
 		var resY = absorptionData.length - 1;
 		var data = new Uint8Array(4 * resY);
