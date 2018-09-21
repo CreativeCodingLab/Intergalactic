@@ -216,9 +216,17 @@
 			uniform sampler2D texture;
 			varying float zval;
 			varying vec2 vUv;
+			varying float vSelect;
 
 			void main() {
 				gl_FragColor =  texture2D( texture, vUv );
+				
+				if (gl_FragColor.a < 0.1 && gl_FragColor.a > -0.1) {
+					gl_FragColor = vec4(0.6, 0.6, 0.6, 1.0);
+				}
+				if (vSelect > 0.9 && vSelect < 1.1){
+					gl_FragColor *= 1.5;
+				}
 			}
 
 		</script>
