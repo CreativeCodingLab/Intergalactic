@@ -11,7 +11,6 @@
 				font-size:13px;
 				text-align:center;
 				font-weight: bold;
-
 				background-color: #000000;
 				margin: 0px;
 				overflow: hidden;
@@ -64,6 +63,10 @@
   			right: 20vw;
 				font-size: 1vw;
 			}
+			.tick text{
+				fill:white;
+			}
+			
 			a { color: #ff0000 }
 		</style>
 	</head>
@@ -74,7 +77,8 @@
 
 		<div id="details">
 			<div><svg id="graph"></svg></div>
-			
+			<div><svg id="graph1"></svg></div>
+
 			<div><svg id="depth-brush"></svg></div>
 			<div><svg id="neighbor-slider"></svg></div>
 
@@ -220,7 +224,7 @@
 
 			void main() {
 				gl_FragColor =  texture2D( texture, vUv );
-				
+
 				if (gl_FragColor.a < 0.1 && gl_FragColor.a > -0.1) {
 					gl_FragColor = vec4(0.6, 0.6, 0.6, 1.0);
 				}
