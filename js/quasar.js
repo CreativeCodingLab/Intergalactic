@@ -51,10 +51,11 @@ let columnWidth = self.innerWidth/3;
 let graphHeight = 200;
 let depthDomain = [.018, .028];
 
+
 // initialization
 let graphs = createGraph();
-let graph = graphs[0];
-let graph1 = graphs[1];
+//let graph = graphs[0];
+//let graph1 = graphs[1];
 
 let xScale = () => d3.scaleLinear().domain(depthDomain).range([0, columnWidth - 50]),
 	yScale = () => d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
@@ -319,251 +320,6 @@ function onMouseMove( event ) {
 	}
 }
 
-function plotSkewerSpectra() {
-	//let i = cylOverIdx;
-	//if (i == -1)
-	i = prevCylOverIdx;
-	let k = skewer[i[0]],
-		spectra = d3.entries(skewerData.get(k));
-	let k1 = skewer[i[1]],
-		spectra1 = d3.entries(skewerData.get(k1));
-	let x = xScale(), y = yScale();
-	// sticky selection
-	if(i[0] != -1){
-		if (pointOverIdx != -1) {
-			let j = pointOverIdx,
-				u = galaxies[j]
-
-			// let [a,b] = x.domain()
-			// relX = x.copy().domain([a - u.position.z, b - u.position.z]) // WIP
-
-			graph.select('.center-mark').remove()
-			graph.append('rect').attr('class', 'center-mark')
-				.attr('x', x(u.position.z)).attr('y', 0)
-				.attr('width', 1).attr('height', graphHeight)
-				.attr('fill', 'red').attr('opacity', .5)
-			}
-
-			graph.select('.xaxis')
-				.call(d3.axisBottom(x).ticks(6)) // relX
-				.selectAll('text')
-					.attr('stroke', 'none')
-					.attr('fill', 'white');
-			graph.select('.yaxis')
-				.call(d3.axisLeft(y))
-				.selectAll('text')
-					.attr('stroke', 'none')
-					.attr('fill', 'white');
-
-			graph.select('.title')
-				.text(k);
-
-			graph.selectAll('.pen').remove()
-
-			spectra.forEach((u) => {
-				// console.log(u)
-				let pen = d3.line()
-					.x((d) => x(d.dist_scaled)) // NOT camelcase
-					.y((d) => y(d.flux_norm));
-				graph.append('path')
-					.attr('class', 'pen')
-					.datum(u.value)
-					.attr('d', pen )
-					.attr('stroke', u.key == 'HI' ? 'white' : 'gray' )
-					.attr('fill', 'none');
-			})
-
-	}
-
-
-	if(i[1] != -1){
-		// let relX = x
-		if (pointOverIdx != -1) {
-			let j = pointOverIdx,
-				u = galaxies[j]
-
-			// let [a,b] = x.domain()
-			// relX = x.copy().domain([a - u.position.z, b - u.position.z]) // WIP
-
-			graph1.select('.center-mark').remove()
-			graph1.append('rect').attr('class', 'center-mark')
-				.attr('x', x(u.position.z)).attr('y', 0)
-				.attr('width', 1).attr('height', graphHeight)
-				.attr('fill', 'red').attr('opacity', .5)
-		}
-
-		// let graph = d3.select('#graph').select('g')
-
-		// fresh axes rendering x(), y()
-
-	// graph 2
-		graph1.select('.xaxis')
-			.call(d3.axisBottom(x).ticks(6)) // relX
-			.selectAll('text')
-				.attr('stroke', 'none')
-				.attr('fill', 'white');
-		graph1.select('.yaxis')
-			.call(d3.axisLeft(y))
-			.selectAll('text')
-				.attr('stroke', 'none')
-				.attr('fill', 'white');
-
-		graph1.select('.title')
-			.text(k1);
-
-		// update plot with all absorption data for this skewer
-
-
-		graph1.selectAll('.pen').remove()
-		spectra1.forEach((u) => {
-			// console.log(u)
-			let pen = d3.line()
-				.x((d) => x(d.dist_scaled)) // NOT camelcase
-				.y((d) => y(d.flux_norm));
-			graph1.append('path')
-				.attr('class', 'pen')
-				.datum(u.value)
-				.attr('d', pen )
-				.attr('stroke', u.key == 'HI' ? 'white' : 'gray' )
-				.attr('fill', 'none');
-		})
-	}
-
-	plotSkewerNeighbors();
-
-}
-
-function plotGalaxyImage(){
-
-	var g = galaxies[pointOverIdx]
-	//g.NSAID
-
-	let f = roundtothree
-	let x = f(g.img_position.x),
-		y = f(g.img_position.y),
-		z = f(g.img_position.z)
-		z_coord = f(g.position.z)
-
-
-	let lines = [
-		'NSAID: ' + g.NSAID,
-		'\n DEC = ' + g.DEC,
-		'RA = ' + g.RA,
-		'redshift: ' + g.redshift,
-		'rvir: ' + g.rvir,
-		'log_sSFR: ' + g.log_sSFR]
-
-	//TO DO: float over to bottom right
-	//TO DO: update image for new galaxy
-
-	var txt = d3.select('#galaxyDesc')
-
-	var svg = d3.select('#galaxyImage')
-
-	txt.select('div').remove()
-	svg.select('div').remove()
-
-	var galaxyDesc = txt.append('div')
-	galaxyDesc.selectAll('p')
-		.data(lines)
-		.enter()
-			.append('p')
-			.text(d => d)
-
-	var galaxyImage = svg.append('div')
-	galaxyImage.append('img')
-		.attr('src', 'data/galaxyImages_partial/'+g.NSAID+'_'+x+'_'+y+'_'+z+'.jpg')
-		.attr('width', window.innerWidth/6)
-	//	.attr('height', 200)
-
-}
-
-function plotSkewerNeighbors() {
-	//let i = cylOverIdx;
-	//if (i == -1 && prevCylOverIdx[0] != -1 && prevCylOverIdx[1] != -1)
-	let i = prevCylOverIdx;
-	//if (i == -1) return;
-
-	if(i[0] != -1){
-		let k = skewer[i[0]], v = skewerData.get(k),
-		 	p = projections[i[0]]; // load cache of this skewer
-		graph.selectAll('.mark').remove()
-
-		if(p){
-			for (let j = 0; j < galaxies.length; ++j) {
-			let dist = p[j][1] // .distanceTo(galaxies[j].position)
-			let u = galaxies[j];
-			if (dist < distanceFromSkewer / boxRadius && u.redshift < depthDomain[1] && u.redshift > depthDomain[0]) { // filter, then map
-
-				//let distAlong = .018 + p[j][0].distanceTo(v.startPoint)
-				let distAlong = u.redshift
-				// console.log(dist, distAlong)
-				let halfSize = 15*u.rvir
-
-				// if (pointOverIdx == j) // boxOfPoints and galaxies not aligned?
-
-				graph.append('rect') // .attr('id', 'g'+j)
-					.attr('class', 'mark')
-					.attr('x', xScale()(distAlong))
-					.attr('y', graphHeight/2 - halfSize)
-					// yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
-					.attr('width', 1)
-					.attr('height', 2*halfSize)
-					.attr('fill', 'lightblue')
-					.attr('opacity', 1 / (30*dist + 1))
-
-					.datum(j)
-					.on('mouseover', (j) => {
-						pointOverIdx = j //; console.log(galaxies[j])
-						selectPoint()
-
-						plotSkewerSpectra()
-						plotGalaxyImage()
-
-					})
-				}
-			}
-		}
-	}
-
-	if(i[1] != -1){
-		let k1 = skewer[i[1]], v1 = skewerData.get(k1),
-			p1 = projections[i[1]]; // load cache of this skewer
-		graph1.selectAll('.mark').remove()
-		if(p1){
-			for (let j = 0; j < galaxies.length; ++j) {
-			let dist1 = p1[j][1]
-			// console.log(dist)
-			let u1 = galaxies[j];
-			if (dist1 < distanceFromSkewer / boxRadius && u1.redshift < depthDomain[1] && u1.redshift > depthDomain[0]) {
-
-				//let distAlong1 = .018 + p1[j][0].distanceTo(v1.startPoint)
-				let distAlong1 = u1.redshift
-				let halfSize = 15*u1.rvir
-				graph1.append('rect') // .attr('id', 'g'+j)
-					.attr('class', 'mark')
-					.attr('x', xScale()(distAlong1))
-					.attr('y', graphHeight/2 - halfSize)
-				// yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
-					.attr('width', 1)
-					.attr('height', 2*halfSize)
-					.attr('fill', 'lightblue')
-					.attr('opacity', 1 / (30*dist1 + 1))
-
-					.datum(j)
-					.on('mouseover', (j) => {
-						pointOverIdx = j //; console.log(galaxies[j])
-						selectPoint()
-
-						plotSkewerSpectra()
-						plotGalaxyImage()
-					})
-				}
-			}
-		}
-	}
-}
-
 function createGraph() {
 	// TODO: compass mode
 	let graphWidth = columnWidth - 50
@@ -626,9 +382,268 @@ function createGraph() {
 	return [ret, ret1] // [graph, trace]
 }
 
+function plotSkewerSpectra() {
+	//let i = cylOverIdx;
+	//if (i == -1)
+	i = prevCylOverIdx;
+
+	//let k1 = skewer[i[1]],
+	//	spectra1 = d3.entries(skewerData.get(k1));
+
+	// sticky selection
+	let n = graphs.length;
+	for(w=0;w<n;w++){
+		let graph = graphs[w];
+		let k = skewer[i[w]],
+			spectra = d3.entries(skewerData.get(k));
+		let x = xScale(), y = yScale();
+
+		if(i[w] != -1){
+			if (pointOverIdx != -1) {
+				let j = pointOverIdx,
+					u = galaxies[j]
+
+				// let [a,b] = x.domain()
+				// relX = x.copy().domain([a - u.position.z, b - u.position.z]) // WIP
+
+				graph.select('.center-mark').remove()
+				graph.append('rect').attr('class', 'center-mark')
+					.attr('x', x(u.position.z)).attr('y', 0)
+					.attr('width', 1).attr('height', graphHeight)
+					.attr('fill', 'red').attr('opacity', .5)
+				}
+
+				graph.select('.xaxis')
+					.call(d3.axisBottom(x).ticks(6)) // relX
+					.selectAll('text')
+						.attr('stroke', 'none')
+						.attr('fill', 'white');
+				graph.select('.yaxis')
+					.call(d3.axisLeft(y))
+					.selectAll('text')
+						.attr('stroke', 'none')
+						.attr('fill', 'white');
+
+				graph.select('.title')
+					.text(k);
+
+				graph.selectAll('.pen').remove()
+
+				spectra.forEach((u) => {
+					// console.log(u)
+					let pen = d3.line()
+						.x((d) => x(d.dist_scaled)) // NOT camelcase
+						.y((d) => y(d.flux_norm));
+					graph.append('path')
+						.attr('class', 'pen')
+						.datum(u.value)
+						.attr('d', pen )
+						.attr('stroke', u.key == 'HI' ? 'white' : 'gray' )
+						.attr('fill', 'none');
+				})
+			}
+	}
+
+/*
+	if(i[1] != -1){
+		// let relX = x
+		if (pointOverIdx != -1) {
+			let j = pointOverIdx,
+				u = galaxies[j]
+
+			// let [a,b] = x.domain()
+			// relX = x.copy().domain([a - u.position.z, b - u.position.z]) // WIP
+
+			graph1.select('.center-mark').remove()
+			graph1.append('rect').attr('class', 'center-mark')
+				.attr('x', x(u.position.z)).attr('y', 0)
+				.attr('width', 1).attr('height', graphHeight)
+				.attr('fill', 'red').attr('opacity', .5)
+		}
+
+		// let graph = d3.select('#graph').select('g')
+
+		// fresh axes rendering x(), y()
+
+	// graph 2
+		graph1.select('.xaxis')
+			.call(d3.axisBottom(x).ticks(6)) // relX
+			.selectAll('text')
+				.attr('stroke', 'none')
+				.attr('fill', 'white');
+		graph1.select('.yaxis')
+			.call(d3.axisLeft(y))
+			.selectAll('text')
+				.attr('stroke', 'none')
+				.attr('fill', 'white');
+
+		graph1.select('.title')
+			.text(k1);
+
+		// update plot with all absorption data for this skewer
+
+
+		graph1.selectAll('.pen').remove()
+		spectra1.forEach((u) => {
+			// console.log(u)
+			let pen = d3.line()
+				.x((d) => x(d.dist_scaled)) // NOT camelcase
+				.y((d) => y(d.flux_norm));
+			graph1.append('path')
+				.attr('class', 'pen')
+				.datum(u.value)
+				.attr('d', pen )
+				.attr('stroke', u.key == 'HI' ? 'white' : 'gray' )
+				.attr('fill', 'none');
+		})
+	}
+*/
+	plotSkewerNeighbors();
+
+}
+
+function plotSkewerNeighbors() {
+	//let i = cylOverIdx;
+	//if (i == -1 && prevCylOverIdx[0] != -1 && prevCylOverIdx[1] != -1)
+	let i = prevCylOverIdx;
+	//if (i == -1) return;
+	let n = graphs.length;
+	for(w=0;w<n;w++){
+		let graph = graphs[w];
+		if(i[w] != -1){
+			let k = skewer[i[w]], v = skewerData.get(k),
+			 	p = projections[i[w]]; // load cache of this skewer
+			graph.selectAll('.mark').remove()
+
+			if(p){
+				for (let j = 0; j < galaxies.length; ++j) {
+				let dist = p[j][1] // .distanceTo(galaxies[j].position)
+				let u = galaxies[j];
+				if (dist < distanceFromSkewer / boxRadius && u.redshift < depthDomain[1] && u.redshift > depthDomain[0]) { // filter, then map
+
+					//let distAlong = .018 + p[j][0].distanceTo(v.startPoint)
+					let distAlong = u.redshift
+					// console.log(dist, distAlong)
+					let halfSize = 15*u.rvir
+
+					// if (pointOverIdx == j) // boxOfPoints and galaxies not aligned?
+
+					graph.append('rect') // .attr('id', 'g'+j)
+						.attr('class', 'mark')
+						.attr('x', xScale()(distAlong))
+						.attr('y', graphHeight/2 - halfSize)
+						// yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
+						.attr('width', 1)
+						.attr('height', 2*halfSize)
+						.attr('fill', '#fa8072')
+						.attr('opacity', 1 / (30*dist + 1))
+
+						.datum(j)
+						.on('mouseover', (j) => {
+							pointOverIdx = j //; console.log(galaxies[j])
+							selectPoint()
+
+							plotSkewerSpectra()
+							plotGalaxyImage()
+
+						})
+					}
+				}
+			}
+		}
+
+	}
+	/*
+
+	if(i[1] != -1){
+		let k1 = skewer[i[1]], v1 = skewerData.get(k1),
+			p1 = projections[i[1]]; // load cache of this skewer
+		graph1.selectAll('.mark').remove()
+		if(p1){
+			for (let j = 0; j < galaxies.length; ++j) {
+			let dist1 = p1[j][1]
+			// console.log(dist)
+			let u1 = galaxies[j];
+			if (dist1 < distanceFromSkewer / boxRadius && u1.redshift < depthDomain[1] && u1.redshift > depthDomain[0]) {
+
+				//let distAlong1 = .018 + p1[j][0].distanceTo(v1.startPoint)
+				let distAlong1 = u1.redshift
+				let halfSize = 15*u1.rvir
+				graph1.append('rect') // .attr('id', 'g'+j)
+					.attr('class', 'mark')
+					.attr('x', xScale()(distAlong1))
+					.attr('y', graphHeight/2 - halfSize)
+				// yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
+					.attr('width', 1)
+					.attr('height', 2*halfSize)
+					.attr('fill', 'lightblue')
+					.attr('opacity', 1 / (30*dist1 + 1))
+
+					.datum(j)
+					.on('mouseover', (j) => {
+						pointOverIdx = j //; console.log(galaxies[j])
+						selectPoint()
+
+						plotSkewerSpectra()
+						plotGalaxyImage()
+					})
+				}
+			}
+		}
+	}
+	*/
+}
+
+
+function plotGalaxyImage(){
+
+	var g = galaxies[pointOverIdx]
+	//g.NSAID
+
+	let f = roundtothree
+	let x = f(g.img_position.x),
+		y = f(g.img_position.y),
+		z = f(g.img_position.z)
+		z_coord = f(g.position.z)
+
+
+	let lines = [
+		'NSAID: ' + g.NSAID,
+		'\n DEC = ' + g.DEC,
+		'RA = ' + g.RA,
+		'redshift: ' + g.redshift,
+		'rvir: ' + g.rvir,
+		'log_sSFR: ' + g.log_sSFR]
+
+	//TO DO: float over to bottom right
+	//TO DO: update image for new galaxy
+
+	var txt = d3.select('#galaxyDesc')
+
+	var svg = d3.select('#galaxyImage')
+
+	txt.select('div').remove()
+	svg.select('div').remove()
+
+	var galaxyDesc = txt.append('div')
+	galaxyDesc.selectAll('p')
+		.data(lines)
+		.enter()
+			.append('p')
+			.text(d => d)
+
+	var galaxyImage = svg.append('div')
+	galaxyImage.append('img')
+		.attr('src', 'data/galaxyImages_partial/'+g.NSAID+'_'+x+'_'+y+'_'+z+'.jpg')
+		.attr('width', window.innerWidth/6)
+	//	.attr('height', 200)
+
+}
+
 function createSlider(init = distanceFromSkewer) {
 	let width = 320, // FIXME: from columnWidth
 		pad = 20
+	d3.select('#neighbor-slider').selectAll('g').remove();
 	let svg = d3.select('#neighbor-slider')
 	svg.attr('width', width + 80).attr('height', 30)
 
@@ -688,7 +703,7 @@ function createSlider(init = distanceFromSkewer) {
 
 function createBrush() {
 	// https://github.com/CreativeCodingLab/DynamicInfluenceNetworks/blob/master/src/js/focusSlider.js
-
+	d3.select('#depth-brush').selectAll('g').remove();
 	let svg = d3.select('#depth-brush')
 
 	let margin = {top: 5, left: 20, bottom: 20, right: 20};
@@ -1092,16 +1107,12 @@ function init() {
 
 	});
 
-
 	var container = document.getElementById( 'container' );
 	container.appendChild( renderer.domElement );
-
 
 	window.addEventListener( 'resize', onWindowResize, false );
 	window.addEventListener( 'mousemove', onMouseMove, false );
 	document.addEventListener("keydown", onKeyDown, false);
-
-
 }
 
 //Creates a gui using the dat.gui library
@@ -1219,13 +1230,13 @@ function onWindowResize() {
 	camera.updateProjectionMatrix();
 
 
-
-
-	graph.remove();
-	graph1.remove();
+	let n = graphs.length;
+	for(w=0;w<n;w++){
+		let graph = graphs[w];
+		graph.remove();
+	}
+	d3.select("#depth-brush").empty();
 	graphs = createGraph();
-	graph = graphs[0];
-	graph1 = graphs[1];
 	plotSkewerSpectra(xScale, yScale);
 	plotSkewerSpectra();
 
