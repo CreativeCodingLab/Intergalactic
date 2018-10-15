@@ -10,7 +10,7 @@
 				font-family:Monospace;
 				font-size:13px;
 				text-align:center;
-				font-weight: bold;
+				/* font-weight: bold; */
 				background-color: #000000;
 				margin: 0px;
 				overflow: hidden;
@@ -28,9 +28,6 @@
 				position: fixed;
 				top: 0;
 				right: 0;
-			}
-			#graph{
-				width: 600px;
 			}
 			#container{
 				width: 67%;
@@ -66,7 +63,20 @@
 			.tick text{
 				fill:white;
 			}
-			
+
+			div.tooltip {
+			    position: absolute;
+			    text-align: center;
+			    width: 60px;
+			    height: 28px;
+			    padding: 2px;
+			    font: 12px sans-serif;
+			    background: lightsteelblue;
+			    border: 0px;		
+			    border-radius: 8px;
+			    pointer-events: none;
+			}
+
 			a { color: #ff0000 }
 		</style>
 	</head>
@@ -76,11 +86,10 @@
 
 
 		<div id="details">
-			<div><svg id="graph"></svg></div>
+		<!--	<div><svg id="graph0"></svg></div>
 			<div><svg id="graph1"></svg></div>
-
 			<div><svg id="depth-brush"></svg></div>
-			<div><svg id="neighbor-slider"></svg></div>
+			<div><svg id="neighbor-slider"></svg></div>-->
 
 			<div id="galaxyDesc"></div>
 			<div id="galaxyImage"></div>
