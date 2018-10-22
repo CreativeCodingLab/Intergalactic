@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js webgl - custom attributes [particles]</title>
+		<title>IGM-VIZ</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
@@ -57,8 +57,8 @@
 				position: fixed;
 				float: right;
 				bottom: 25px;
-  			right: 20vw;
-				font-size: 1vw;
+  				right: 20vw;
+				font-size: 0.8vw;
 			}
 			.tick text{
 				fill:white;
@@ -72,9 +72,14 @@
 			    padding: 2px;
 			    font: 12px sans-serif;
 			    background: lightsteelblue;
-			    border: 0px;		
+			    border: 0px;
 			    border-radius: 8px;
 			    pointer-events: none;
+			}
+
+			#graphs {
+				overflow: scroll;
+				height: 500px;
 			}
 
 			a { color: #ff0000 }
@@ -86,22 +91,17 @@
 
 
 		<div id="details">
-		<!--	<div><svg id="graph0"></svg></div>
-			<div><svg id="graph1"></svg></div>
-			<div><svg id="depth-brush"></svg></div>
-			<div><svg id="neighbor-slider"></svg></div>-->
-
+			<div id="graphs"></div>
 			<div id="galaxyDesc"></div>
 			<div id="galaxyImage"></div>
 		</div>
+
 		<script src="libs/three.js"></script>
 		<script src="libs/OrbitControls.js"></script>
 		<script src="libs/THREE.TextTexture.js"></script>
 		<script src="libs/THREE.TextSprite.js"></script>
-
 		<script src="libs/dat.gui.min.js"></script>
 		<script src="libs/d3.js"></script>
-
 		<script src="js/quasar.js"></script>
 
 
