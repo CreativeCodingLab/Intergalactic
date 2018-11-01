@@ -1,3 +1,7 @@
+//QUASAR.JS
+//In coordination with the CreativeCodingLab and the Astrophysics department at UCSC
+//Jasmine Otto, David Abramov, Joe Burchett (Astrophysics), Angus Forbes
+
 // instantiate once
 var renderer, scene, camera, controls;
 var gui, guiParams;
@@ -20,18 +24,20 @@ var optionFile = 'options.txt';
 // mutable params
 var galaxyFile, skewerFile;
 var galaxyRvirScalar = 0.5;
+
 // var skewerWidth = 0.06;
+
 var galaxyRedHSL = "hsl(0, 90%, 50%)";
 var galaxyBlueHSL = "hsl(200, 70%, 50%)";
 var skewerAbsorptionMinHSL = "hsl(100, 90%, 50%)";
 var skewerAbsorptionMaxHSL = "hsl(280, 90%, 60%)";
 var showLabels = true;
-var cameraFocalPoint = new THREE.Vector3(0,0,0);
+var cameraFocalPoint;
+// = new THREE.Vector3(0,0,0);
 
 // immutable params
 var boxRadius = 30;
 var skewerLinearFiltering = false;
-
 
 // internal mutables - pass as arguments, avoid direct use.
 var filterDistantGalaxies = false;
@@ -44,15 +50,36 @@ var mouse = new THREE.Vector2();
 var pointOverIdx = -1;
 var prevPointOverIdx = -1;
 var cylOverIdx = -1;
-var prevCylOverIdx = -1;
 
 //sets the size of the space on the right side of the screen
 let columnWidth = self.innerWidth/3;
 let graphHeight = 200;
-let depthDomain = [.5, .9];
+let depthDomain = [.017, .029];
 
-// initialization
-let graph = createGraph();
+//graph initialization
+let n_skewers = 4;
+var prevCylOverIdx = [];
+for(i=0;i<n_skewers;i++){
+	prevCylOverIdx.push(-1);
+}
+var boxHeight = 'rvir';
+var boxWidth = 2;
+
+var halfWidth = boxWidth;
+var halfSize = 10;
+
+var currentGalaxy;
+var selectedGalaxies = [];
+
+var trigger = false;
+
+var cyl = [];
+var cyl_0;
+
+var projections = [];
+
+
+let graphs = createGraph(n_skewers);
 
 let xScale = () => d3.scaleLinear().domain(depthDomain).range([0, columnWidth - 50]),
 	yScale = () => d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
@@ -67,24 +94,152 @@ function loadGalaxyData(callback) {
 	d3.dsv(" ", galaxyFile, (d) => {
 		return {
 			'NSAID': d.NSAID,
-			'position': new THREE.Vector3(parseFloat(d.x), parseFloat(d.y), parseFloat(d.z)),
-			'rvir': d.rvir,
+			'RA': d.RA,
+			'DEC': d.DEC,
 			'redshift': d.redshift,
+			'mstars' : d.mstars,
+			'sfr' : d.sfr,
+			'sfr_err' : d.sfr_err,
+			'rvir' : d.rvir,
 			'log_sSFR': d.log_sSFR,
-			'color': d.color
+			'color': d.color,
+			'kpc_DA' : cosmcalc(d.redshift),
+			'position': sphericalToCartesian(d.RA,d.DEC,d.redshift)
 		}
 	}).then((data) => {
 		processGalaxyData(data);
 		galaxies = data; // TODO: as new Map()
-
 		callback();
 	});
 }
 
+function loadProjections(){
+	d3.json(projectionData).then(function(d){
+		projections = d
+	})
+}
+
+function cosmcalc(z){ //takes in redshift
+	var H0=73; // hubble constant
+	var WM=0.27;
+	var WV=0.73;
+
+	//initialize constants
+	let verbose = 0
+	let WR = 0.        // Omega(radiation)
+    let WK = 0.        // Omega curvaturve = 1-Omega(total)
+    let c = 299792.458 // velocity of light in km/sec
+    let Tyr = 977.8    // coefficent for converting 1/H into Gyr
+    let DTT = 0.5      // time from z to now in units of 1/H0
+    let DTT_Gyr = 0.0  // value of DTT in Gyr
+    let age = 0.5      // age of Universe in units of 1/H0
+    let age_Gyr = 0.0  // value of age in Gyr
+    let zage = 0.1     // age of Universe at redshift z in units of 1/H0
+    let zage_Gyr = 0.0 // value of zage in Gyr
+    let DCMR = 0.0     // comoving radial distance in units of c/H0
+    let DCMR_Mpc = 0.0 
+    let DCMR_Gyr = 0.0
+    let DA = 0.0       // angular size distance
+    let DA_Mpc = 0.0
+    let DA_Gyr = 0.0
+    let kpc_DA = 0.0
+    let DL = 0.0       // luminosity distance
+    let DL_Mpc = 0.0
+    let DL_Gyr = 0.0   // DL in units of billions of light years
+    let V_Gpc = 0.0
+    let a = 1.0        // 1/(1+z), the scale factor of the Universe
+	let az = 0.5       // 1/(1+z(object))
+	
+	let h = H0/100.
+    WR = 4.165E-5/(h*h)   // includes 3 massless neutrino species, T0 = 2.72528
+    WK = 1-WM-WR-WV
+    az = 1.0/(1.0+1.0*z)
+    age = 0.
+    n=1000         // number of points in integrals
+    for (i=0; i<n; i++){
+      a = az*(i+0.5)/n
+      let adot = Math.sqrt(WK+(WM/a)+(WR/(a*a))+(WV*a*a))
+	  age = age + 1./adot
+	}
+    zage = az*age/n
+    zage_Gyr = (Tyr/H0)*zage
+    DTT = 0.0
+	DCMR = 0.0
+	
+	// do integral over a=1/(1+z) from az to 1 in n steps, midpoint rule
+    for (i=0; i<n; i++){
+      a = az+(1-az)*(i+0.5)/n
+      let adot = Math.sqrt(WK+(WM/a)+(WR/(a*a))+(WV*a*a))
+      DTT = DTT + 1./adot
+	  DCMR = DCMR + 1./(a*adot)
+	}
+    DTT = (1.-az)*DTT/n
+    DCMR = (1.-az)*DCMR/n
+    age = DTT+zage
+    age_Gyr = age*(Tyr/H0)
+    DTT_Gyr = (Tyr/H0)*DTT
+    DCMR_Gyr = (Tyr/H0)*DCMR
+	DCMR_Mpc = (c/H0)*DCMR
+	
+// tangential comoving distance
+
+    let ratio = 1.00
+    let x = Math.sqrt(Math.abs(WK))*DCMR
+    if (x > 0.1){
+      if (WK > 0){
+		ratio =  0.5*(exp(x)-exp(-x))/x
+	  } 
+      else{
+		ratio = sin(x)/x
+	  }
+	}
+    else{
+      y = x*x
+      if (WK < 0){
+		y = -y
+		  ratio = 1. + y/6. + y*y/120.
+	  }
+	}
+    DCMT = ratio*DCMR
+    DA = az*DCMT
+    DA_Mpc = (c/H0)*DA
+    kpc_DA = DA_Mpc/206.264806
+    /*DA_Gyr = (Tyr/H0)*DA
+    DL = DA/(az*az)
+    DL_Mpc = (c/H0)*DL
+    DL_Gyr = (Tyr/H0)*DL
+
+  // comoving volume computation
+
+    ratio = 1.00
+    x = Math.sqrt(Math.abs(WK))*DCMR
+    if (x > 0.1){
+		if (WK > 0){
+			ratio = (0.125*(exp(2.*x)-exp(-2.*x))-x/2.)/(x*x*x/3.)
+		}  
+		else{
+			ratio = (x/2. - sin(2.*x)/4.)/(x*x*x/3.)
+		}
+	}      
+    else{
+		let y = x*x
+			if (WK < 0){
+				y = -y
+				ratio = 1. + y/5. + (2./105.)*y*y
+			}
+	}
+    VCM = ratio*DCMR*DCMR*DCMR/3.
+	V_Gpc = 4.*Math.pi*((0.001*c/H0)**3)*VCM
+	*/
+	
+	return(kpc_DA)
+}
+
 function roundtothree(s, round = true) {
 	// FIXME: must agree with rounding to 3 digits during file generation
-	return +parseFloat(s).toFixed(3)
-	// return round ? Math.round(1000 * v) / 1000.0 : v
+	// return +parseFloat(s).toFixed(3)
+	let v = parseFloat(s)
+	return round ? Math.round(1000 * v) / 1000.0 : v
 }
 
 function loadSkewerData(callback) {
@@ -96,40 +251,47 @@ function loadSkewerData(callback) {
 			'name': d.name,
 			'start': new THREE.Vector3(f(d.x1), f(d.y1), f(d.z1)),
 			'end': new THREE.Vector3(f(d.x2), f(d.y2), f(d.z2)),
+			'RA': +d.RA,
+			'DEC': +d.DEC
 		}
 	}).then( (data) => {
 		data.forEach( (d) => {
 			skewer.push(d.name)
 			//plotSkewer immediately or else scene graph group will not be aligned with skewer
-			plotSkewer(d.name, d.start.clone().multiplyScalar(boxRadius),
-								d.end.clone().multiplyScalar(boxRadius))
-			let file = [d.name, '', d.start.x, d.start.y, d.start.z,
-								'', d.end.x, d.end.y, d.end.z].join('_') + '.dat'
+			//plotSkewer(d.name, d.start.clone().multiplyScalar(boxRadius),
+								//d.end.clone().multiplyScalar(boxRadius))
+			plotSkewer(d.name,d.RA, d.DEC)
+			let file = [d.name] + '.dat'
 			//for full data set:
 			//let file = d.name + '.dat'
 			let spectra = ['HI', 'CIV']
 			skewerData.set(d.name, {
 				'start': d.start,
-				'end': d.end
+				'end': d.end,
+				'RA': +d.RA,
+				'DEC': +d.DEC,
+				'startPoint': sphericalToCartesian(d.RA,d.DEC,galaxy_redshift_min).clone(),
+				'endPoint': sphericalToCartesian(d.RA,d.DEC,galaxy_redshift_max).clone()
 			})
-			
 
 			// individual reads of each element
 			spectra.forEach( (el) => {
 				let path = 'data/spectra_' + el + '_partial_norm/'
 				//for full data set:
 				//let path = 'data/spectra_' + el + '_norm/'
-
-				d3.dsv(' ', path + file, (dee) => {
+				d3.dsv(' ', path + file, (d) => {
 					// x y z dist_scaled dist_frac flux_norm
 					return {
 						// VERIFY x,y,z recoverable from start_point, dist_scaled
-						'dist_scaled': parseFloat(dee.dist_scaled),
-						'flux_norm': parseFloat(dee.flux_norm),
+						//'dist_scaled': parseFloat(dee.dist_scaled),
+						//'dist_scaled': +spectraScale(d.dist_scaled), //delete when redshift values is added to spectra
+						'flux_norm': parseFloat(d.flux_norm),
+						'redshift': d.redshift,
+						'wavelength': d.wavelength
 					}
 				}).then( (data) => {
 					if (data.length > 1) { // CATCH sentinel values
-						
+
 						skewerData.get(d.name)[el] = data // register to model
 						if (el === 'HI')
 							createAbsorptionDataTexture(d.name)
@@ -147,18 +309,72 @@ let computeProjections = () => {
 
 	skewer.forEach( (k) => {
 		let u = skewerData.get(k)
-		let skewerLine = new THREE.Line3(u.start, u.end);
+		var galaxy_redshift_min = galaxies.reduce((min, p) => p.redshift < min ? p.redshift : min, galaxies[0].redshift)
+		var galaxy_redshift_max = galaxies.reduce((max, p) => p.redshift > max ? p.redshift : max, galaxies[0].redshift)
+
+		var startPoint = sphericalToCartesian(u.RA,u.DEC,galaxy_redshift_min).clone()
+		//console.log(startPoint)
+		var endPoint = sphericalToCartesian(u.RA,u.DEC,galaxy_redshift_max).clone()
+
+		let skewerLine = new THREE.Line3(startPoint, endPoint);
 
 		let ret = galaxies.map( v => {
 			let p = skewerLine.closestPointToPoint(v.position, true) // clamped to line segment
-			return [p, v.position.distanceTo(p)] // < 6*boxRadius ? p : null
+			return [v.NSAID,k, cosmcalc(v.position.distanceTo(p))] // < 6*boxRadius ? p : null
 		}) // maintain array alignment (w/o wasting memory?)
 
 		// console.log(u, k, ret.map(u => u[1])) // a few skewers are far from everything
 		projections.push(ret)
 	})
 }
-let projections = []
+
+
+function exportData(name, text) {
+	const a = document.createElement('a');
+	const type = name.split(".").pop();
+	a.href = URL.createObjectURL( new Blob([text], { type:`text/${type === "txt" ? "plain" : type}` }) );
+	a.download = name;
+	a.click();
+	
+	/*ar processRow = function (row) {
+        var finalVal = '';
+        for (var j = 0; j < row.length; j++) {
+            var innerValue = row[j] === null ? '' : row[j].toString();
+            if (row[j] instanceof Date) {
+                innerValue = row[j].toLocaleString();
+            };
+            var result = innerValue.replace(/"/g, '""');
+            if (result.search(/("|,|\n)/g) >= 0)
+                result = '"' + result + '"';
+            if (j > 0)
+                finalVal += ',';
+            finalVal += result;
+        }
+        return finalVal + '\n';
+    };
+
+    var csvFile = '';
+    for (var i = 0; i < rows.length; i++) {
+        csvFile += processRow(rows[i]);
+    }
+
+    var blob = new Blob([csvFile], { type: 'text/csv;charset=utf-8;' });
+    if (navigator.msSaveBlob) { // IE 10+
+        navigator.msSaveBlob(blob, filename);
+    } else {
+        var link = document.createElement("a");
+        if (link.download !== undefined) { // feature detection
+            // Browsers that support HTML5 download attribute
+            var url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+			document.body.removeChild(link);
+		}
+	}*/
+}
 
 
 // EVENT HANDLERS
@@ -169,18 +385,33 @@ function onKeyDown(event) {
     if ( keyChar  == 'S') {
 		cylinderGroup.visible = !cylinderGroup.visible;
 		cylinderBackGroup.visible = !cylinderBackGroup.visible;
+	}
+	else if ( keyChar  == 'T') {
+		textGroup.visible = !textGroup.visible;
+	}	
+	else if ( keyChar == 'G') {
+		if(!selectedGalaxies.includes(currentGalaxy[1])){
+			selectedGalaxies.push(currentGalaxy[1])
+			trigger = true;
+			plotGalaxyImage(currentGalaxy[1])
+			trigger = false;
+		}
+		
+	}
 
-    } else if ( keyChar  == 'T') {
-	    textGroup.visible = !textGroup.visible;
+	else if( keyChar == 'D') {
+		//exportData('projections.json',JSON.stringify(projections))
+	}
 
-	} /* else if ( keyChar  == 'G') {
+	 /* else if ( keyChar  == 'G') {
 	    for (var g = 0; g < galaxies.length; g++) {
 		var galaxy = galaxies[g];
 		galaxy.isVisible = true;
 		boxOfPoints.geometry.attributes.isVisible.array[g] = 1.0;
 		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
 		}
-    }*/ else if ( keyChar == 'N') {
+	}*/ 
+	else if ( keyChar == 'N') {
 	    toggleGalaxiesNearSkewers(); // skewers, distanceFromSkewer
     }
 };
@@ -193,27 +424,52 @@ function selectPoint() {
 	cs[pointOverIdx] = 1.0;
 	prevPointOverIdx = pointOverIdx;
 	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+	d3.selectAll('.mark')
+		.on('mouseover', (j) => {
+			d3.selectAll('.g'+pointOverIdx)
+				.style('fill','red')
+		})
+
 }
 function unselectPoint() {
 	var cs = boxOfPoints.geometry.attributes.isSelected.array;
-		for (var p = 0; p < cs.length; p++) {
-			cs[p] = 0.0;
-		}
-		prevPointOverIdx = -1;
-		boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+	for (var p = 0; p < cs.length; p++) {
+		cs[p] = 0.0;
+	}
+	/*d3.selectAll('.mark')
+		.on('mouseout', (j) => {
+			d3.selectAll('.mark')
+				.style('fill','white')
+		})*/
+	prevPointOverIdx = -1;
+	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+	
 }
 
 // WIP - pass bool attribute to fragment shader of each cylinder?
 function selectSkewer() {
-	let cyl = cylinderGroup.children[cylOverIdx]
-	cyl.geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
-	cyl.geometry.attributes.isSelected.needsUpdate = true;
+	for(i=0;i<prevCylOverIdx.length;i++){
+		if(cyl[i]){
+			cyl[i] = cylinderGroup.children[prevCylOverIdx[i]]
+			cyl[i].geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
+			cyl[i].geometry.attributes.isSelected.needsUpdate = true;
+		}
+	}
+	cyl_0 = cylinderGroup.children[cylOverIdx]
+	cyl_0.geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
+	cyl_0.geometry.attributes.isSelected.needsUpdate = true;
+	
 }
 function unselectSkewer() {
-	let cyl = cylinderGroup.children[prevCylOverIdx]
-	if (cyl) {
-		cyl.geometry.attributes.isSelected.set(Array(192).fill(0.0))
-		cyl.geometry.attributes.isSelected.needsUpdate = true;
+	for(i=0;i<prevCylOverIdx.length;i++){
+		if (cyl[i]) {
+			cyl[i].geometry.attributes.isSelected.set(Array(192).fill(0.0))
+			cyl[i].geometry.attributes.isSelected.needsUpdate = true;
+		}
+	}
+	if(cyl_0){
+		cyl_0.geometry.attributes.isSelected.set(Array(192).fill(0.0)) // OR, swap out material?
+		cyl_0.geometry.attributes.isSelected.needsUpdate = true;
 	}
 }
 
@@ -224,7 +480,7 @@ function onMouseMove( event ) {
 	// (-1 to +1) for both components
 
 	mouse.x = ( event.clientX / (window.innerWidth - columnWidth) ) * 2 - 1;
-	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+	mouse.y = - ( event.clientY / (window.innerHeight - 200) ) * 2 + 1;
 
 	raycaster.setFromCamera( mouse, camera );
 
@@ -236,7 +492,7 @@ function onMouseMove( event ) {
 		var p = intersects[ i ];
 
 		// greedy fuzzy select?
-		if (p.object.type == "Points" && p.distanceToRay < 0.2) {
+		if (p.object.type == "Points" && p.distanceToRay < 0.00009) {
 			pointOverIdx = p.index;
 			break;
 		}
@@ -245,9 +501,11 @@ function onMouseMove( event ) {
 	if (pointOverIdx >= 0 && pointOverIdx != prevPointOverIdx) {
 		// mouse is over new point; show galaxy details
 		selectPoint();
-
-		plotSkewerSpectra(); // FIXME: only really redrawing x-axis
-		plotGalaxyImage(); // fire once for each new hover
+		plotSkewerSpectra();
+		d3.selectAll('.g'+pointOverIdx)
+				.style('fill','red')
+		
+		plotGalaxyImage(pointOverIdx); // fire once for each new hover
 	}
 	if (pointOverIdx < 0 && prevPointOverIdx >= 0) {
 		// mouse isn't over a point anymore
@@ -256,7 +514,13 @@ function onMouseMove( event ) {
 
 	//intersect with skewers
 	intersects = raycaster.intersectObjects( cylinderGroup.children );
-	if (cylOverIdx != -1) prevCylOverIdx = cylOverIdx
+	//checks to see if the skewer you are over is already contained within prevCylOverIdx, as to prevent graphs flipping
+	let n = n_skewers;
+
+	if (cylOverIdx != -1 && !prevCylOverIdx.includes(cylOverIdx)){
+		prevCylOverIdx.pop()
+		prevCylOverIdx.unshift(cylOverIdx)
+	}
 	cylOverIdx = -1;
 
 	for ( var i = 0; i < intersects.length; i++ ) {
@@ -267,212 +531,324 @@ function onMouseMove( event ) {
 			//console.log('skewers['+cylOverIdx+']', p);
 
 			// cylOverLoc = p.point; // EXPECT offset by radius from actual position along skewer.
-			break;
+	//		break;
 		}
 	}
 
-	if (cylOverIdx > -1 && cylOverIdx != prevCylOverIdx) {
+	if (cylOverIdx > -1 && !prevCylOverIdx.includes(cylOverIdx)) {
 		unselectSkewer()
 		selectSkewer()
-
 		plotSkewerSpectra();
-		plotSkewerNeighbors();
 	}
+}
+
+function createGraph(n_skewers) {
+	let graphWidth = columnWidth - 50
+	/*d3.select('#n-graphs').on('change', function(a){
+		n_skewers = d3.select(this).property('value');
+	})*/
+	let n = n_skewers;
+	var graphs = [];
+	for(i=0;i<n;i++){
+		let ret = d3.select('#details').select('#graphs').append('div').attr('id','graph' + i).append('svg')
+						.attr("width", graphWidth + 50)
+						.attr("height", graphHeight + 50)
+						.append('g')
+						.attr("transform", "translate(25, 25)")
+		ret.append('rect')
+			.attr('class','graph-background')
+			.attr('x', 0).attr('y', 0)
+			.attr('width', graphWidth).attr('height', graphHeight)
+			//.attr('fill', '#444444')
+			//.attr('opacity', 1)
+		graphs[i] = ret;
+
+	}
+	createBrush()
+	createSlider()
+	plotHistogram()
+	return graphs
 }
 
 function plotSkewerSpectra() {
-	let i = cylOverIdx;
-	if (i == -1) i = prevCylOverIdx;
+	i = prevCylOverIdx;
+
 	// sticky selection
+	let n = graphs.length;
+	//graphs.forEach((d) => {
+	for(w=0;w<n;w++){
+		let graph = graphs[w];
 
-	let k = skewer[i],
-		spectra = d3.entries(skewerData.get(k));
-	let x = xScale(), y = yScale();
+		let k = skewer[i[w]],
+			spectra = d3.entries(skewerData.get(k));
+		let x = xScale(), y = yScale();
 
-	let relX = x
-	if (pointOverIdx != -1) {
-		let j = pointOverIdx,
-			u = galaxies[j]
+		if(i[w] != -1){
+			if (pointOverIdx != -1) {
+				let j = pointOverIdx,
+					u = galaxies[j]
+				}
+				graph.selectAll("graph" + w + "_border").remove()
+				d3.select('#details').select('#graph' + w).selectAll('g').selectAll('.yaxis').remove();
+				d3.select('#details').select('#graph' + w).selectAll('.xaxis').remove();
+				d3.select('#details').select('#graph' + w).selectAll('.title').remove();
+				d3.select('#details').select('#graph' + w).selectAll('#border').remove();
+				graph.selectAll('.penHI').remove()
+				graph.selectAll('.penCIV').remove()
 
-		let [a,b] = x.domain()
-		relX = x.copy().domain([a - u.position.z, b - u.position.z]) // WIP
+				let pen = d3.line()
+					.x((d) => x(d.redshift))
+					.y((d) => y(d.flux_norm))
+					//.curve(d3.curveCardinal);
+				spectra.forEach((u) => {
+					graph.selectAll('.pen' + u.key).remove()
+					graph.selectAll('#border').remove()
+					graph.append('path')
+						.attr('class', 'pen' + u.key)
+						.datum(u.value)
+						.attr('d', pen )
+						//.attr('stroke', u.key == 'HI' ? '#f4eaff' : '#ffd6ce' )
+						//.attr('stroke', u.key == 'HI' ? '#9aeab9' : '#9aeab9' )
+						.attr('fill', 'none')
+					graph.append('rect')
+							.attr("id","border")
+							.attr("transform","translate(-40,-20)")
+							//.attr("x","15")
+							//.attr("y","10")
+							.attr("width",columnWidth)
+							//.attr("height",graphHeight+25)
+							//.attr("style","stroke: #5b5b5b;stroke-width: 50; fill: none;")
+					let k = spectra.length - 6
+						if(k==1 && (u.key == 'HI' || u.key == 'CIV')){
+							graph.append('g').attr('class', 'yaxis')
+								.attr('stroke', 'white')
+								//.call(d3.axisLeft(y))
+								.append('text')
+								.attr("transform", "translate(-10," + graphHeight/2 + ") rotate(-90)")
+			      		.style("text-anchor", "middle")
+								.text(u.key);
+						}
+						else if(k==2){
+							graph.selectAll('.penHI').attr("transform","translate(0," + graphHeight/4 + ")")
+							graph.selectAll('.penCIV').attr("transform","translate(0," + (-1)*graphHeight/4 + ")")
+								graph.append('g').attr('class', 'yaxis')
+									.attr('stroke', 'white')
+									.append('text')
+									.attr("transform", "translate(-10," + 3*graphHeight/4 + ") rotate(-90)")
+				      		.style("text-anchor", "middle")
+									.text('HI');
+								graph.append('g').attr('class', 'yaxis')
+									.attr('stroke', 'white')
+									.append('text')
+									.attr("transform", "translate(-10," + graphHeight/4 + ") rotate(-90)")
+				      		.style("text-anchor", "middle")
+									.text('CIV');
+							}
+						d3.selectAll('text')
+							.attr('stroke', 'none')
+							.attr('fill', 'white');
+					})
+			}
+			graph.append('g').attr('class', 'xaxis')
+				.attr('transform', 'translate(0,'+graphHeight+')')
+				.attr('stroke', 'white')
+				.call(d3.axisBottom(x).ticks(6)) // relX
+				.selectAll('text')
+					.attr('stroke', 'none')
+					.attr('fill', 'white');
 
-		graph.select('.center-mark').remove()
-		graph.append('rect').attr('class', 'center-mark')
-			.attr('x', x(u.position.z)).attr('y', 0)
-			.attr('width', 1).attr('height', graphHeight)
-			.attr('fill', 'red').attr('opacity', .5)
+			graph.append('text').attr('class','title')
+				.attr('transform', 'translate('+(columnWidth-50)/2+', -7)')
+				.attr('text-anchor', 'middle')
+				.attr('fill', 'white')
+				.text(k);
 	}
-
-	//TODO: determine number of graphs to be generated
-	//may need to be updated if data for other absorption spectra are given
-
-	// let graph = d3.select('#graph').select('g')
-
-	// fresh axes rendering x(), y()
-	graph.select('.xaxis')
-		.call(d3.axisBottom(x))
-		.selectAll('text')
-			.attr('stroke', 'none')
-			.attr('fill', 'white');
-	graph.select('.yaxis')
-		.call(d3.axisLeft(y))
-		.selectAll('text')
-			.attr('stroke', 'none')
-			.attr('fill', 'white');
-
-	graph.select('.title')
-		.text(k);
-
-	// update plot with all absorption data for this skewer
-
-
-	graph.selectAll('.pen').remove()
-	spectra.forEach((u) => {
-		// console.log(u)
-		let pen = d3.line()
-			.x((d) => x(d.dist_scaled)) // NOT camelcase
-			.y((d) => y(d.flux_norm));
-		graph.append('path')
-			.attr('class', 'pen')
-			.datum(u.value)
-			.attr('d', pen )
-			.attr('stroke', u.key == 'HI' ? 'white' : 'gray' )
-			.attr('fill', 'none');
-	})
-
-		// ({value: v}) => pen(v)
-		// ({key: k}) => k == 'HI' ? 'white' : k == 'CIV' ? 'blue' : 'red'
+	plotSkewerNeighbors();
 }
-
-function plotGalaxyImage(){
-	
-	var g = galaxies[pointOverIdx]
-	//g.NSAID
-
-	let f = roundtothree
-	let x = f(g.position.x),
-		y = f(g.position.y),
-		z = f(g.position.z)
-	let lines = [
-		'NSAID: ' + g.NSAID,
-		'\n x = ' + x,
-		'y = ' + y,
-		'z = ' + z,
-		'redshift: ' + g.redshift,
-		'log_sSFR: ' + g.log_sSFR]
-
-	//TO DO: float over to bottom right
-	//TO DO: update image for new galaxy
-
-	var txt = d3.select('#galaxyDesc')
-
-	var svg = d3.select('#galaxyImage')
-
-	txt.select('div').remove()
-	svg.select('div').remove()
-
-	var galaxyDesc = txt.append('div')
-	galaxyDesc.selectAll('p')
-		.data(lines)
-		.enter()
-			.append('p')
-			.text(d => d)
-
-	var galaxyImage = svg.append('div')
-	galaxyImage.append('img')
-		.attr('src', 'data/galaxyImages_partial/'+g.NSAID+'_'+x+'_'+y+'_'+z+'.jpg')
-		.attr('width', window.innerWidth/6)
-	//	.attr('height', 200)
-	
-}
-
 function plotSkewerNeighbors() {
-	// let u = skewers[cylOverIdx];
-	let i = cylOverIdx;
-	if (i == -1) i = prevCylOverIdx;
-	if (i == -1) return;
+	let i = prevCylOverIdx;
+	let n = graphs.length;
+	
+	d3.select('#box-height').on('change', function(a){
+		boxHeight = d3.select(this).property('value');
+	})
+	d3.select('#box-width').on('change', function(a){
+		boxWidth = d3.select(this).property('value');
+	})
+	for(w=0;w<n;w++){
+		let graph = graphs[w];
+		if(i[w] != -1){
+			let k = skewer[i[w]], v = skewerData.get(k),
+			 	p = projections[i[w]]; // load cache of this skewer
+			graph.selectAll('.mark').remove()
+			
+			if(p){
+				for (let j = 0; j < galaxies.length; ++j) {
+				let dist = p[j][2] // .distanceTo(galaxies[j].position)
+				let u = galaxies[j];
+				
+				if(boxWidth == 'dist'){
+					halfWidth = 1/(10*dist)
+				}
+				else if(boxWidth == 'rvir'){
+					halfWidth = 10*u.rvir
+				}
+				else if(boxWidth == 'sfr'){
+					halfWidth = 10*u.sfr
+				}
+				else if(boxWidth == 'mstars'){
+					halfWidth = 2*u.mstars
+				}
+				else if(boxWidth == 'onePx'){
+					halfWidth = 1
+				}
+				if(boxHeight == 'dist'){
+					halfSize = 1/(10*dist)
+				}
+				else if(boxHeight == 'rvir'){
+					halfSize = 10*u.rvir
+				}
+				else if(boxHeight == 'sfr'){
+					halfSize = 10*u.sfr
+				}
+				else if(boxHeight == 'mstars'){
+					halfSize = 2*u.mstars
+				}
+				if (dist < distanceFromSkewer / boxRadius && u.redshift < depthDomain[1] && u.redshift > depthDomain[0]) { // filter, then map
+					let distAlong = u.redshift
+					
+					//let halfWidth = u.rvir*2
+					//let halfWidth = 10/(u.mstars)
 
-	let k = skewer[i], v = skewerData.get(k),
-		p = projections[i]; // load cache of this skewer
+					// if (pointOverIdx == j) // boxOfPoints and galaxies not aligned?
 
-	graph.selectAll('.mark').remove()
-	for (let j = 0; j < galaxies.length; ++j) {
-		let dist = p[j][1] // .distanceTo(galaxies[j].position)
-		// console.log(dist)
+					graph.append('rect')
+						.attr('class', 'mark g'+j)
+						.attr('x', xScale()(distAlong))
+						.attr('y', graphHeight/2 - halfSize)
+						// yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
+						.attr('width', halfWidth)
+						.attr('height', 2*halfSize)
+						//.attr('fill', '#ffff00')
+						//.attr('opacity', 1 / (30*dist + 1))
+						//.attr('opacity', 1)
+						.datum(j)
+						/*.on('mouseover', (j) => {
+							pointOverIdx = j
+							selectPoint()
+							plotSkewerSpectra()
+							plotGalaxyImage()
+						})*/
+						.on('mouseover', (j) => {
+							
+							pointOverIdx = j //;
+							selectPoint()
+							//plotSkewerSpectra()
+							plotGalaxyImage(pointOverIdx)
+							
+						})
+						.on('mouseout', (j) =>{
+							prevPointOverIdx = j
+							unselectPoint()
+							plotSkewerSpectra()
+						})
 
-		if (dist < distanceFromSkewer / boxRadius) { // filter, then map
-			let u = galaxies[j];
-			let distAlong = .5 + p[j][0].distanceTo(v.start)
-			// console.log(dist, distAlong)
-
-			let halfSize = 20*u.rvir
-
-			// if (pointOverIdx == j) // boxOfPoints and galaxies not aligned?
-
-			graph.append('rect') // .attr('id', 'g'+j)
-				.attr('class', 'mark')
-				.attr('x', xScale()(distAlong))
-				.attr('y', graphHeight/2 - halfSize)
-				// yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
-				.attr('width', 1)
-				.attr('height', 2*halfSize)
-				.attr('fill', 'lightblue')
-				.attr('opacity', 1 / (30*dist + 1))
-
-				.datum(j)
-				.on('mouseover', (j) => {
-					pointOverIdx = j //; console.log(galaxies[j])
-					selectPoint()
-
-					plotSkewerSpectra()
-					plotGalaxyImage()
-				}) // VERIFY
+						
+					}
+				}
+			}
 		}
 	}
 }
 
-function createGraph() {
-	// TODO: compass mode
-	let graphWidth = columnWidth - 50
+function plotHistogram(){
 
-	let ret = d3.select('#graph')
-					.attr("width", graphWidth + 50)
-					.attr("height", graphHeight + 50)
-					.append('g')
-						.attr("transform", "translate(25, 25)")
+}
 
-	ret.append('rect')
-		.attr('x', 0).attr('y', 0)
-		.attr('width', graphWidth).attr('height', graphHeight)
-		.attr('fill', 'black')
-		.attr('opacity', .5)
+function plotGalaxyImage(idx){
 
-	// annotations
-	ret.append('g').attr('class', 'xaxis')
-		.attr('transform', 'translate(0,'+graphHeight+')')
-		.attr('stroke', 'white')
-	ret.append('g').attr('class', 'yaxis')
-		.attr('stroke', 'white')
+	var g = galaxies[idx]
+	currentGalaxy = [g,idx];
+	let f = roundtothree
 
-	ret.append('text').attr('class', 'title')
-		.attr('transform', 'translate('+graphWidth/2+', 0)')
-		.attr('text-anchor', 'middle')
-		.attr('fill', 'white')
+	let lines = [
+		'NSAID: ' + g.NSAID,
+		'DEC = ' + g.DEC,
+		'RA = ' + g.RA,
+		'mstars = ' + g.mstars,
+		'sfr = ' + g.sfr,
+		'sfr_err = ' + g.sfr_err,
+		'redshift: ' + g.redshift,
+		'rvir: ' + g.rvir,
+		'log_sSFR: ' + g.log_sSFR]
 
-	// modifiers
-	createSlider()
-	createBrush()
-
-	// let trace = graph.selectAll('.pen')
-		 			 // .data(data) // FIXME
-	return ret // [graph, trace]
+	if(!trigger){
+		var txt = d3.select('#galaxyDesc')
+		var svg = d3.select('#galaxyImage')
+		txt.select('div').remove()
+		svg.select('div').remove()
+	
+		var galaxyDesc = txt.append('div')
+		galaxyDesc.selectAll('p')
+			.data(lines)
+			.enter()
+				.append('p')
+				.text(d => d)
+	
+		var galaxyImage = svg.append('div')
+		galaxyImage.append('img')
+			.attr('src', 'data/galaxyImages_partial/' + g.NSAID + '.jpg')
+			.attr('width', '200px')
+	}
+	else{
+		var txt = d3.select('#selectedGalaxies').append('div')
+			.attr('id','galaxyDesc' + g.NSAID)
+			.attr('class','galaxyQueue galaxyQueue-Desc')
+		var svg = d3.select('#selectedGalaxies').append('div')
+			.attr('id','galaxyImage' + g.NSAID)
+			.attr('class','galaxyQueue')
+		//txt.select('div').remove()
+		//svg.select('div').remove()
+	
+		/*txt.selectAll('p')
+			.data(lines)
+			.enter()
+				.append('p')
+				.text(d => d)
+		*/
+		svg.append('img')
+			.attr('src', 'data/galaxyImages_partial/' + g.NSAID + '.jpg')
+			.attr('width', '200px')
+		txt.selectAll('p')
+			.data(lines)
+			.enter()
+			.append('p')
+			.style('width','150px')
+			.text(d => d)
+		
+	}
+	d3.selectAll('.galaxyQueue')
+		.on('mouseover', (p) => {
+			
+			pointOverIdx = p //;
+			selectPoint()
+			d3.selectAll('.g'+idx)
+				.style('fill','red')
+			var cs = boxOfPoints.geometry.attributes.isSelected.array;
+				for (var p = 0; p < cs.length; p++) {
+					cs[p] = 0.0;
+				}
+			cs[idx] = 1.0;
+			prevPointOverIdx = idx;
+			boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+		})
 }
 
 function createSlider(init = distanceFromSkewer) {
-	let width = 320, // FIXME: from columnWidth
+	let width = columnWidth - columnWidth/4, // FIXME: from columnWidth
 		pad = 20
-	let svg = d3.select('#neighbor-slider')
+	d3.select('#details').selectAll('#neighbor-slider').remove();
+	let svg = d3.select('#details').append('div').attr('id','neighbor-slider').append('svg')
 	svg.attr('width', width + 80).attr('height', 30)
 
 	svg.append('rect').attr('class', 'slider-track')
@@ -482,28 +858,28 @@ function createSlider(init = distanceFromSkewer) {
 		/* .on('click', () => {
 			apply(d3.event.x) // WIP - needs context of the slider handle.
 		}) */
-		
+
 	let scale = d3.scaleLinear()
 		.range([pad, width - pad])
-		.domain([0.0, 6.0])
+		.domain([0.0, 2])
 		.clamp(true);
 
 	svg.append('text').attr('id', 'slider-value')
 		.attr('x', width).attr('y', 17.5)
-		.text(init)
+		.text(init + " kpc")
 		.style('fill', 'white')
-		
+
 	let drag = d3.drag()
-		.on('drag', function() { 
+		.on('drag', function() {
 			if (d3.event.dx === 0) { return; }
 			let x = d3.event.x;
 			x = x < pad ? pad : x > width-pad ? width-pad : x
-			
+
 			d3.select(this)
 				.attr('cx', x);
 			let value = scale.copy().invert(x);
 			svg.select('#slider-value')
-				.text(roundtothree(value))
+				.text(roundtothree(value)+ " kpc")
 
 			distanceFromSkewer = value
 			if (filterDistantGalaxies) {
@@ -511,7 +887,7 @@ function createSlider(init = distanceFromSkewer) {
 			}
 			plotSkewerNeighbors();
 		})
-	
+
 	svg.append('g') // d3.event wants to be relative to a group
 		.append('circle').attr('class', 'slider-handle')
 		.attr('cx', scale(init))
@@ -531,9 +907,10 @@ function createSlider(init = distanceFromSkewer) {
 
 function createBrush() {
 	// https://github.com/CreativeCodingLab/DynamicInfluenceNetworks/blob/master/src/js/focusSlider.js
-	let svg = d3.select('#depth-brush')
+	d3.select('#details').selectAll('#depth-brush').remove();
+	let svg = d3.select('#details').append('div').attr('id','depth-brush').append('svg')
 
-	let margin = {top: 5, left: 50, bottom: 20, right: 20};
+	let margin = {top: 5, left: 20, bottom: 20, right: 20};
 	let axis = svg.append('g');
 
 	let brush = svg.append("g")
@@ -543,41 +920,44 @@ function createBrush() {
 	let x = d3.scaleLinear()
 	.domain(depthDomain)
 	.range([margin.left, width - 1]);
-	
+
 	resize();
 	drawBrush();
 
 	function resize() {
-		var w = 400 - margin.right;
+		var w = columnWidth - margin.right;
 		var h = 60;
-		
+
 		var aspect = w / h;
-		var vw = 280;
+		var vw = columnWidth;
 		var vh = vw / aspect;
 
 		width = vw;
 		height = vh - margin.bottom;
 
-		svg //.style("font-size", "12px")
+		svg
+			//.style("font-size", "2px")
 			.attr('width', w).attr('height', h)
 			.attr("viewBox", "0 0 " + vw + " " + vh)
+			//.attr("text", "white")
 
 		x.range([margin.left, width - margin.right]);
-		
+
 		axis.attr('transform', 'translate(0,' + height + ')')
-			.call(d3.axisBottom(x))
+			.call(d3.axisBottom(x).ticks(4))
+
 	}
-	
+
 	function drawBrush() {
 		if (!x) { return; }
 		let brusher = d3.brushX()
 			.extent([[margin.left, 0], [width - margin.right, height]])
 			.on("brush end", brushed);
-		
+
 		brush.call(brusher)
 			.call(brusher.move, x.range());
 	}
-	
+
 	function brushed() {
 		var s = d3.event.selection || x.range();
 		ret = s.map(x.invert, x);
@@ -585,7 +965,7 @@ function createBrush() {
 			depthDomain[0] = ret[0]
 			depthDomain[1] = ret[1]
 
-			if (prevCylOverIdx !== -1) {
+			if (prevCylOverIdx[0] !== -1 && prevCylOverIdx[0] !== -1) {
 				plotSkewerSpectra()
 				plotSkewerNeighbors()
 			}
@@ -600,6 +980,7 @@ function processOptions(callback) {
 	let parse = {
 		'skewerData': (v) => {skewerFile = v},
 		'galaxyData': (v) => {galaxyFile = v},
+		'projectionData': (v) => {projectionData = v},
 		'galaxyRvirScalar': (v) => {galaxyRvirScalar = parseFloat(v)},
 		'galaxyRedHSL': (v) => {galaxyRedHSL = v},
 		'galaxyBlueHSL': (v) => {galaxyBlueHSL = v},
@@ -617,9 +998,9 @@ function processOptions(callback) {
 			controls.target = cameraFocalPoint;
 			controls.update();
 			},
-		'cameraPositionZ': (v) => {
-			camera.position.z = v
-		}
+		'cameraPositionX': (v) => {camera.position.x = v},
+		'cameraPositionY': (v) => {camera.position.y = v},
+		'cameraPositionZ': (v) => {camera.position.z = v}
 	}
 
 	d3.text('options.txt').then( (data) => {
@@ -631,11 +1012,30 @@ function processOptions(callback) {
 			var key = cells[0];
 			var value = cells[1];
 
-			console.log(key, value)
+			//console.log(key, value)
 			if (key in parse) parse[key](value)
 		}
 		callback();
 	})
+}
+
+function sphericalToCartesian(RA,DEC,redshift) {
+	//takes in phi (RA) and theta (DEC) in degrees
+	var theta = RA * (Math.PI/180)
+	var phi = DEC * (Math.PI/180)
+	var r = redshift
+
+	var sph_pos = new THREE.Spherical(r,phi,theta)
+		//Spherical( radius : Float, phi POLAR : Float, theta EQUATOR : Float )
+		//PHI AND THETA ARE SWAPPED (physics vs math notation)
+	var x = sph_pos.radius*Math.cos(sph_pos.phi)*Math.sin(sph_pos.theta)
+	var y = sph_pos.radius*Math.cos(sph_pos.phi)*Math.cos(sph_pos.theta)
+	var z = sph_pos.radius*Math.sin(sph_pos.phi)
+
+	var cartesian_position = new THREE.Vector3(x,y,z)
+	//console.log(sph_pos)
+
+	return cartesian_position;
 }
 
 function processGalaxyData(data) {
@@ -656,8 +1056,11 @@ function processGalaxyData(data) {
 		let u = data[i];
 		var id = u.NSAID;
 
-		var vertex = u.position.clone()
-		vertex.multiplyScalar(boxRadius)
+		var vertex = data[i].position.clone()
+		//console.log(sphericalToCartesian(u.RA,u.DEC,u.redshift))
+		//var vertex = u.position.clone();
+
+		//vertex.multiplyScalar(boxRadius)
 		vertex.toArray( positions, i * 3 );
 
 		colors[i] = u.color == "red" ? 0 :
@@ -706,7 +1109,7 @@ function processGalaxyData(data) {
 
 	boxOfPoints = new THREE.Points( geometry, material );
 	scene.add( boxOfPoints );
-
+/* //This needs to be updated for new coordinate system
 	if (showLabels) {
 		//Label  (x,y,z) = (-0.166381, 0.062923, ?) as ‘Coma cluster’
 
@@ -729,6 +1132,7 @@ function processGalaxyData(data) {
 		sprite.position.setX(-0.166381 * boxRadius).setY(0.062923 * boxRadius).setZ(30);
 		textGroup.add(sprite);
 	}
+	*/
 }
 
 function filterGalaxiesNearSkewers() {
@@ -763,7 +1167,8 @@ function toggleGalaxiesNearSkewers() {
 }
 
 
-function plotSkewer(name, startPoint, endPoint){
+//function plotSkewer(name, startPoint, endPoint){
+function plotSkewer(name, RA, DEC){
 	// was 'recreate_SkewerIndividual'
 
 	//Whenever this function is called it resets the position of skewers based on the original skewerDataFiles.txt
@@ -789,7 +1194,21 @@ function plotSkewer(name, startPoint, endPoint){
 		side:		THREE.FrontSide
 	});
 
-	var cylLength = new THREE.Vector3().subVectors(endPoint, startPoint).length();
+	galaxy_redshift_min = galaxies.reduce((min, p) => p.redshift < min ? p.redshift : min, galaxies[0].redshift)
+	galaxy_redshift_max = galaxies.reduce((max, p) => p.redshift > max ? p.redshift : max, galaxies[0].redshift)
+
+	var startPoint = sphericalToCartesian(RA,DEC,galaxy_redshift_min).clone()
+	var endPoint = sphericalToCartesian(RA,DEC,galaxy_redshift_max).clone()
+
+	//var cylLength = new THREE.Vector3().subVectors(endPoint, startPoint).length();
+	var cylLength = startPoint.distanceTo( endPoint );
+
+
+//	r_min = galaxies.reduce((min, p) => p.position.z < min ? p.position.z : min, galaxies[0].position.z)
+//	r_max = galaxies.reduce((max, p) => p.position.z > max ? p.position.z : max, galaxies[0].position.z)
+
+//	var cylLength = -Math.abs(Math.abs(r_max) - Math.abs(r_min))*40;
+	//console.log(startPoint)
 	var cylGeom = new THREE.CylinderBufferGeometry(skewerWidth, skewerWidth, cylLength, 32, 1, true);
 	cylGeom.translate(0, cylLength / 2, 0);
 	cylGeom.rotateX(Math.PI / 2);
@@ -799,12 +1218,15 @@ function plotSkewer(name, startPoint, endPoint){
 	cylGeom.addAttribute( 'isSelected', new THREE.BufferAttribute( new Float32Array(32*6).fill(0.0), 1 ) )
 	var cyl = new THREE.Mesh(cylGeom, cylMat);
 
+	//cyl.position.copy(position);
 	cyl.position.copy(startPoint);
 	cyl.lookAt(endPoint);
 
 	cyl.userData.name = name;
 
 	var cyl2 = new THREE.Mesh(cylGeom, cylMat);
+
+	//cyl2.position.copy(position);
 	cyl2.position.copy(startPoint);
 	cyl2.lookAt(endPoint);
 
@@ -812,12 +1234,13 @@ function plotSkewer(name, startPoint, endPoint){
 	cylinderBackGroup.add( cyl2 ); // do not also add to cylinderGroup - won't be aligned with skewers data.
 	// console.log(cyl, cyl2);
 
+
 	if (showLabels) {
 		//Label  (x,y) = (-0.166381,0.062923) as ‘Coma cluster’ //z position??
 
 		// TODO: fix level of detail, which is overagressive
 		let sprite = new THREE.TextSprite({
-			textSize: 0.25,
+			textSize: 0.000125,
 			redrawInterval: 250,
 			texture: {
 				text: name,
@@ -826,7 +1249,7 @@ function plotSkewer(name, startPoint, endPoint){
 			},
 			material: {
 				color: 0xffffff,
-				fog: true,
+				fog: false,
 				transparent: true,
 				opacity: 0.9,
 			},
@@ -834,6 +1257,7 @@ function plotSkewer(name, startPoint, endPoint){
 		sprite.position.setX(startPoint.x).setY(startPoint.y).setZ(startPoint.z);
 		textGroup.add(sprite);
 	}
+
 }
 
 /*
@@ -856,12 +1280,14 @@ function init() {
 
 	renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio( window.devicePixelRatio );
-	renderer.setSize( window.innerWidth - columnWidth, window.innerHeight );
+	renderer.setSize( window.innerWidth - columnWidth, window.innerHeight - 200 );
+
 
 	camera = new THREE.PerspectiveCamera(
-		20 /* fov */, window.innerWidth / window.innerHeight /* aspect */,
-		1 /* near */, 10000 /* far */ );
-	controls = new THREE.OrbitControls( camera );
+		28 /* fov */, (2*window.innerWidth/3) / (window.innerHeight - 200) /* aspect */,
+		0.001 /* near */, 1 /* far */ );
+	controls = new THREE.OrbitControls( camera, renderer.domElement );
+	camera.maxDistance = Infinity;
 
 	scene = new THREE.Scene();
 
@@ -873,22 +1299,18 @@ function init() {
 	scene.add( textGroup );
 
 	processOptions(() => { // need parameters to load first
-		loadSkewerData( () =>
-			loadGalaxyData( computeProjections )
-		); // need skewer and galaxy data before taking projections
+		loadGalaxyData( () =>
+			//loadSkewerData( computeProjections )); // need skewer and galaxy data before taking projections
+			loadSkewerData( loadProjections )); // need skewer and galaxy data before taking projections
 		displayGui();
-		
 	});
 
 	var container = document.getElementById( 'container' );
 	container.appendChild( renderer.domElement );
 
-
 	window.addEventListener( 'resize', onWindowResize, false );
 	window.addEventListener( 'mousemove', onMouseMove, false );
 	document.addEventListener("keydown", onKeyDown, false);
-
-
 }
 
 //Creates a gui using the dat.gui library
@@ -913,7 +1335,7 @@ function displayGui(){
 		skewerWidth: skewerWidth,
 		skewerAbsorMinHSL: [skewMinHSL.r * 255, skewMinHSL.g * 255, skewMinHSL.b * 255],
 		skewerAbsorMaxHSL: [skewMaxHSL.r * 255, skewMaxHSL.g * 255, skewMaxHSL.b * 255],
-		
+
 		skewersVisible: function(){
 			cylinderGroup.visible = !cylinderGroup.visible;
 			cylinderBackGroup.visible = !cylinderBackGroup.visible;
@@ -925,7 +1347,7 @@ function displayGui(){
 	var galaxyFolder = gui.addFolder('Galaxies');
 	// var galNearSkew =      galaxyFolder.add(guiParams, "galNearSkewer").name("Galaxies Close to Skewers");
 	// var galRangeNearSkew = galaxyFolder.add(guiParams, "galDist2Skewer", 0.01, 6).name("Range From Skewer");
-	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", .2, 5).name("Rvir Scalar");
+	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", galaxyRvirScalar/2, galaxyRvirScalar*10).name("Rvir Scalar");
 	var galaxyRed  = galaxyFolder.addColor(guiParams, "galRedHSL").name("Red Value");
 	var galaxyBlue = galaxyFolder.addColor(guiParams, "galBlueHSL").name("Blue Value");
 
@@ -936,29 +1358,6 @@ function displayGui(){
 	var skewerWidthChange = skewerFolder.add(guiParams, "skewerWidth", 0.0, 0.5).step(0.01).name("Width");
 	var skewerMinAbs = skewerFolder.addColor(guiParams, "skewerAbsorMinHSL").name("Minimum Absorption");
 	var skewerMaxAbs = skewerFolder.addColor(guiParams, "skewerAbsorMaxHSL").name("Maximum Absorption");
-
-
-	//Functions to update the galaxy parameters in the scene------
-	/* moved to graph column
-	galNearSkew.onChange(function(value){
-		if (value) {
-			filterGalaxiesNearSkewers();
-		} else {
-			for (var g = 0; g < galaxies.length; g++) {
-				var galaxy = galaxies[g];
-				galaxy.isVisible = true;
-				boxOfPoints.geometry.attributes.isVisible.array[g] = 1.0;
-				boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
-	    	}
-		}
-	});
-	galRangeNearSkew.onChange(function(value){
-		distanceFromSkewer = value;
-		if (guiParams.galNearSkewer) {
-			filterGalaxiesNearSkewers();
-		}
-		plotSkewerNeighbors(xScale);
-	}); */
 
 	galaxyRvirSc.onChange(function(value){
 		//console.log(value);
@@ -1020,22 +1419,30 @@ function displayGui(){
 
 function onWindowResize() {
 
-	camera.aspect = window.innerWidth / window.innerHeight;
+	columnWidth = window.innerWidth/3;
+	var canvas = document.getElementsByTagName('canvas')[0]
+	canvas.width = window.innerWidth - columnWidth
+	canvas.height = window.innerHeight - 200;
+	renderer.setSize( (window.innerWidth - columnWidth), window.innerHeight - 200 );
+	camera.aspect = (window.innerWidth - columnWidth) / (window.innerHeight - 200);
 	camera.updateProjectionMatrix();
 
-	columnWidth = window.innerWidth/3;
-	// console.log(column_width);
 
-	graph.remove();
-	graph = createGraph();
+	let n = graphs.length;
+	for(w=0;w<n;w++){
+		//let graph = graphs[w];
+		d3.select('#details').selectAll('#graph' + w).remove();
+	}
+	d3.select("#depth-brush").empty();
+	graphs = createGraph(n_skewers);
 	plotSkewerSpectra(xScale, yScale);
+	plotSkewerSpectra();
 
-	renderer.setSize( 2*window.innerWidth/3, window.innerHeight );
+
 }
 
 function animate() {
 	requestAnimationFrame( animate );
-
 	renderer.render( scene, camera );
 }
 
@@ -1064,9 +1471,9 @@ function createAbsorptionDataTexture(name) {
 		c = cylinderGroup.children[skewer.indexOf(name)];
 		// FIXME: unnecessary O(n) per skewer, once
 
-	if (!v || !v.HI) {
+	/* if (!v || !v.HI) {
 		var defaultMat = new THREE.ShaderMaterial( {
-	
+
 			uniforms: {
 				amplitude: { value: 1.0 },
 				color:     { value: new THREE.Color( 0xffffff ) },
@@ -1074,18 +1481,18 @@ function createAbsorptionDataTexture(name) {
 			vertexShader:   document.getElementById( 'cyl_vertexshader' ).textContent,
 			fragmentShader: document.getElementById( 'cyl_fragmentshader2' ).textContent,
 			// FALLBACK - no data
-	
+
 			//blending:       THREE.AdditiveBlending,
 			depthTest:      true,
 			transparent:    false,
-			side:		THREE.BackSide
-	
+			side:		THREE.FrontSide
+
 		});
 		// var data = new Uint8Array([255, 255, 255, 255]);
 
 		c.material = defaultMat // VERIFY
-	}
-	else {
+	} */
+	if (v && v.HI) {
 		let absorptionData = skewerData.get(name).HI.map(u => u.flux_norm)
 		var resY = absorptionData.length - 1;
 		var data = new Uint8Array(4 * resY);

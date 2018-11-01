@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js webgl - custom attributes [particles]</title>
+		<title>IGM-VIZ</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
 			body {
 				color: #ffffff;
-				font-family:Monospace;
+				font-family:Verdana;
 				font-size:13px;
 				text-align:center;
-				font-weight: bold;
-
+				/* font-weight: bold; */
 				background-color: #000000;
 				margin: 0px;
 				overflow: hidden;
@@ -20,7 +19,9 @@
 				float: left;
 			}
 			#details {
-				background-color: #343d46;
+				/*background-color: #343d46;
+				background-color: #161616;*/
+				background-color: #424242;
 				width: 33%;
 				height: 100%;
 				float: right;
@@ -30,14 +31,13 @@
 				top: 0;
 				right: 0;
 			}
-			#graph{
-				width: 600px;
-			}
+
 			#container{
 				width: 67%;
-				height: 100%;
+				height: 100% - 200px;
 				left: 0px;
 				margin: 0px;
+				bottom: 200px;
 			}
 			#info {
 				color: #fff;
@@ -46,24 +46,122 @@
 				padding: 5px;
 				z-index:100;
 			}
+
+			#bottom-panel {
+				background-color: #424242;
+				height: 202px;
+				width: 67%;
+				left: 0;
+				bottom: 0;
+				position: absolute;
+				display: block;
+				float: left;
+			}
+
 			#galaxyImage{
 				background-color: #000000;
-				height:16.5vw;
-				width: 16.5vw;
+				/*height:16.5vw;
+				width: 16.5vw;*/
+				height: 200px;
+				width: 200px;
 				position: absolute;
-  			bottom: 0px;
-  			right: 0px;
-				float:right;
+  				bottom: 1px;
+  				left: 1px;
+				float:left;
 
 			}
 			#galaxyDesc {
 				display: block;
 				position: fixed;
-				float: right;
-				bottom: 25px;
-  			right: 20vw;
-				font-size: 1vw;
+				float: left;
+				bottom: 15px;
+  				left: 210px;
+				font-size: 13px;
+				text-align: left;
+				line-height: 4px;
 			}
+
+			#selectedGalaxies {
+				display: flex;
+				flex-direction: row-reverse;
+				position: fixed;
+				float: left;
+				bottom: 0px;
+				overflow-x: scroll;
+				left: 370px;
+				right: 33%;
+				height: 202px;
+				/*bottom: -1px;*/
+				padding-left: 1px;
+				
+			}
+
+			.tick text{
+				fill:white;
+				font-family:Verdana;
+			}
+
+			#depth-brush text{
+				font-size: 13px;
+				font-family:Verdana;
+			}
+
+			.xaxis text{
+				font-size: 13px;
+				font-family:Verdana;
+			}
+
+			.penHI {
+				stroke: #1c1d23;
+			}
+			.penCIV {
+				stroke: #1c1d23;
+			}
+
+			#border {
+				stroke: #1f1f1f;
+				stroke-width: 50;
+				fill: none;
+				x: 15;
+				y: -5;
+				height: 250px;
+			}
+			#graphs {
+				overflow-y: scroll;
+				height: 80vh;
+			}
+
+			.graph-background {
+				fill: #868686;
+				opacity: 1;
+			}
+
+			#selector p{
+				display: inline;
+				font-size: 24px;
+			}
+
+			.mark{ 
+				fill: #ffffff;
+				opacity: 0.75; 
+			}
+			.galaxyQueue{
+				border-style: solid;
+				border-width: 0px 1px 0px 1px;
+				border-color: #868686;
+				
+			}
+			.galaxyQueue-Desc{
+				display: inline-block;
+				font-size: 13px;
+				text-align: left;
+				line-height: 8px;
+				margin-left:4px;
+				width: 150px;
+			}
+
+		
+
 			a { color: #ff0000 }
 		</style>
 	</head>
@@ -73,22 +171,43 @@
 
 
 		<div id="details">
-			<div><svg id="graph"></svg></div>
-			
-			<div><svg id="depth-brush"></svg></div>
-			<div><svg id="neighbor-slider"></svg></div>
-
-			<div id="galaxyDesc"></div>
-			<div id="galaxyImage"></div>
+			<div id="graphs"></div>
+			<div id="histogram"></div>
+			<div id="selector">
+				<label>↕</label>
+				<select id="box-height">
+					<option value="rvir">rvir</option>
+					<option value="dist">distance from skewer</option>
+					<option value="mstars">mstars</option>
+					<option value="sfr">star formation rate</option>
+				</select>
+				<label>↔</label>
+				<select id="box-width">
+					<option value="onePx">1 px</option>
+					<option value="rvir">rvir</option>
+					<option value="dist">distance from skewer</option>
+					<option value="mstars">mstars</option>
+					<option value="sfr">star formation rate</option>
+				</select>
+				<!--<input type="number" id="n-graphs" name="n-graphs"
+					placeholder="4"
+					min="1" max="10" />
+				<span class="validity"></span>-->
+			</div>
 		</div>
+		<div id="bottom-panel">
+			<div id="galaxyImage"></div>
+			<div id="galaxyDesc"></div>
+			<div id="selectedGalaxies"></div>
+		</div>
+		
+
 		<script src="libs/three.js"></script>
 		<script src="libs/OrbitControls.js"></script>
 		<script src="libs/THREE.TextTexture.js"></script>
 		<script src="libs/THREE.TextSprite.js"></script>
-
 		<script src="libs/dat.gui.min.js"></script>
 		<script src="libs/d3.js"></script>
-
 		<script src="js/quasar.js"></script>
 
 
@@ -220,7 +339,7 @@
 
 			void main() {
 				gl_FragColor =  texture2D( texture, vUv );
-				
+
 				if (gl_FragColor.a < 0.1 && gl_FragColor.a > -0.1) {
 					gl_FragColor = vec4(0.6, 0.6, 0.6, 1.0);
 				}
