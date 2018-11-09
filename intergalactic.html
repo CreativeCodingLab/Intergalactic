@@ -21,7 +21,7 @@
 			#details {
 				/*background-color: #343d46;
 				background-color: #161616;*/
-				background-color: #424242;
+				background-color: #1f1f1f;
 				width: 33%;
 				height: 100%;
 				float: right;
@@ -48,7 +48,7 @@
 			}
 
 			#bottom-panel {
-				background-color: #424242;
+				background-color: #484848;
 				height: 202px;
 				width: 67%;
 				left: 0;
@@ -88,12 +88,11 @@
 				float: left;
 				bottom: 0px;
 				overflow-x: scroll;
-				left: 370px;
+				left: 395px;
 				right: 33%;
 				height: 202px;
 				/*bottom: -1px;*/
 				padding-left: 1px;
-				
 			}
 
 			.tick text{
@@ -104,6 +103,10 @@
 			#depth-brush text{
 				font-size: 13px;
 				font-family:Verdana;
+			}
+
+			#depth-brush{
+				margin-top: 20px;
 			}
 
 			.xaxis text{
@@ -122,25 +125,16 @@
 				stroke: #1f1f1f;
 				stroke-width: 50;
 				fill: none;
-				x: 15;
-				y: -5;
 				height: 250px;
 			}
 			#graphs {
 				overflow-y: scroll;
 				height: 80vh;
 			}
-
 			.graph-background {
 				fill: #868686;
 				opacity: 1;
 			}
-
-			#selector p{
-				display: inline;
-				font-size: 24px;
-			}
-
 			.mark{ 
 				fill: #ffffff;
 				opacity: 0.75; 
@@ -157,7 +151,47 @@
 				text-align: left;
 				line-height: 8px;
 				margin-left:4px;
-				width: 150px;
+				width: 165px;
+			}
+
+			.graphNumber {
+				fill: white;
+			}
+
+			.skewerSaveInstructions{
+				fill: white;
+			}
+
+			#selector p{
+				display: inline;
+			}
+			#selector{
+				font-size: 20px;
+			}
+			select {
+				font-size: 14px;
+				border: none;
+				box-shadow: none;
+				border-radius: 0;
+				background: transparent;
+				height: 100%;
+				cursor: pointer;
+				outline: none;
+				padding-right: 35px;
+				padding-left: 15px;	
+				text-align-last: center;
+			}
+			#box-height {
+				height: 40px;
+				background: rgb(199, 199, 199);
+				box-shadow: 0 3px 0 rgba(0,0,0,.05);
+			}
+			
+
+			#box-width {
+				height: 40px;
+				background: rgb(199, 199, 199);
+				box-shadow: 0 3px 0 rgba(0,0,0,.05);
 			}
 
 		
@@ -172,7 +206,6 @@
 
 		<div id="details">
 			<div id="graphs"></div>
-			<div id="histogram"></div>
 			<div id="selector">
 				<label>↕</label>
 				<select id="box-height">
@@ -189,16 +222,13 @@
 					<option value="mstars">mstars</option>
 					<option value="sfr">star formation rate</option>
 				</select>
-				<!--<input type="number" id="n-graphs" name="n-graphs"
-					placeholder="4"
-					min="1" max="10" />
-				<span class="validity"></span>-->
 			</div>
 		</div>
 		<div id="bottom-panel">
 			<div id="galaxyImage"></div>
 			<div id="galaxyDesc"></div>
 			<div id="selectedGalaxies"></div>
+			<p id="imageSaveInstructions">Press 'G' to save selected galaxy</p>
 		</div>
 		
 
@@ -209,8 +239,7 @@
 		<script src="libs/dat.gui.min.js"></script>
 		<script src="libs/d3.js"></script>
 		<script src="js/quasar.js"></script>
-
-
+		<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
 
 		<script type="x-shader/x-vertex" id="vertexshader">
 

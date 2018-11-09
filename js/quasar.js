@@ -57,7 +57,7 @@ let graphHeight = 200;
 let depthDomain = [.017, .029];
 
 //graph initialization
-let n_skewers = 4;
+let n_skewers = 9;
 var prevCylOverIdx = [];
 for(i=0;i<n_skewers;i++){
 	prevCylOverIdx.push(-1);
@@ -335,45 +335,6 @@ function exportData(name, text) {
 	a.href = URL.createObjectURL( new Blob([text], { type:`text/${type === "txt" ? "plain" : type}` }) );
 	a.download = name;
 	a.click();
-	
-	/*ar processRow = function (row) {
-        var finalVal = '';
-        for (var j = 0; j < row.length; j++) {
-            var innerValue = row[j] === null ? '' : row[j].toString();
-            if (row[j] instanceof Date) {
-                innerValue = row[j].toLocaleString();
-            };
-            var result = innerValue.replace(/"/g, '""');
-            if (result.search(/("|,|\n)/g) >= 0)
-                result = '"' + result + '"';
-            if (j > 0)
-                finalVal += ',';
-            finalVal += result;
-        }
-        return finalVal + '\n';
-    };
-
-    var csvFile = '';
-    for (var i = 0; i < rows.length; i++) {
-        csvFile += processRow(rows[i]);
-    }
-
-    var blob = new Blob([csvFile], { type: 'text/csv;charset=utf-8;' });
-    if (navigator.msSaveBlob) { // IE 10+
-        navigator.msSaveBlob(blob, filename);
-    } else {
-        var link = document.createElement("a");
-        if (link.download !== undefined) { // feature detection
-            // Browsers that support HTML5 download attribute
-            var url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", filename);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-			document.body.removeChild(link);
-		}
-	}*/
 }
 
 
@@ -391,12 +352,92 @@ function onKeyDown(event) {
 	}	
 	else if ( keyChar == 'G') {
 		if(!selectedGalaxies.includes(currentGalaxy[1])){
+			d3.select('#bottom-panel').selectAll('#imageSaveInstructions').remove()
 			selectedGalaxies.push(currentGalaxy[1])
 			trigger = true;
-			plotGalaxyImage(currentGalaxy[1])
+			plotGalaxyImage(currentGalaxy[1],trigger)
 			trigger = false;
 		}
-		
+	}
+	else if ( keyChar == '1') {
+		if(prevCylOverIdx[0] == -1){
+			prevCylOverIdx[0] = cylOverIdx;
+		}
+		else{
+			prevCylOverIdx[0] = -1
+		}
+		plotSkewerSpectra();
+	}
+	else if ( keyChar == '2') {
+		if(prevCylOverIdx[1] == -1){
+			prevCylOverIdx[1] = cylOverIdx;
+		}
+		else{
+			prevCylOverIdx[1] = -1
+		}
+		plotSkewerSpectra();
+	}
+	else if ( keyChar == '3') {
+		if(prevCylOverIdx[2] == -1){
+			prevCylOverIdx[2] = cylOverIdx;
+		}
+		else{
+			prevCylOverIdx[2] = -1
+		}
+		plotSkewerSpectra();	}
+	else if ( keyChar == '4') {
+		if(prevCylOverIdx[3] == -1){
+			prevCylOverIdx[3] = cylOverIdx;
+		}
+		else{
+			prevCylOverIdx[3] = -1
+		}
+		plotSkewerSpectra();	
+	}		
+	else if ( keyChar == '5') {
+		if(prevCylOverIdx[4] == -1){
+			prevCylOverIdx[4] = cylOverIdx;
+		}
+		else{
+			prevCylOverIdx[4] = -1
+		}
+		plotSkewerSpectra();	
+	}
+	else if ( keyChar == '6') {
+		if(prevCylOverIdx[5] == -1){
+			prevCylOverIdx[5] = cylOverIdx;
+		}
+		else{
+			prevCylOverIdx[5] = -1
+		}
+		plotSkewerSpectra();	
+	}
+	else if ( keyChar == '7') {
+		if(prevCylOverIdx[6] == -1){
+			prevCylOverIdx[6] = cylOverIdx;
+		}
+		else{
+			prevCylOverIdx[6] = -1
+		}
+		plotSkewerSpectra();	
+	}
+	else if ( keyChar == '8') {
+		if(prevCylOverIdx[7] == -1){
+			prevCylOverIdx[7] = cylOverIdx;
+		}
+		else{
+			prevCylOverIdx[7] = -1
+		}
+		plotSkewerSpectra();	
+	}
+	else if ( keyChar == '9') {
+		if(prevCylOverIdx[8] == -1){
+			prevCylOverIdx[8] = cylOverIdx;
+		}
+		else{
+			prevCylOverIdx[8] = -1
+		}
+		plotSkewerSpectra();	
 	}
 
 	else if( keyChar == 'D') {
@@ -502,9 +543,9 @@ function onMouseMove( event ) {
 		// mouse is over new point; show galaxy details
 		selectPoint();
 		plotSkewerSpectra();
-		d3.selectAll('.g'+pointOverIdx)
+		/*d3.selectAll('.g'+pointOverIdx)
 				.style('fill','red')
-		
+		*/
 		plotGalaxyImage(pointOverIdx); // fire once for each new hover
 	}
 	if (pointOverIdx < 0 && prevPointOverIdx >= 0) {
@@ -517,11 +558,13 @@ function onMouseMove( event ) {
 	//checks to see if the skewer you are over is already contained within prevCylOverIdx, as to prevent graphs flipping
 	let n = n_skewers;
 
+	/*
 	if (cylOverIdx != -1 && !prevCylOverIdx.includes(cylOverIdx)){
 		prevCylOverIdx.pop()
 		prevCylOverIdx.unshift(cylOverIdx)
 	}
 	cylOverIdx = -1;
+	*/
 
 	for ( var i = 0; i < intersects.length; i++ ) {
 		var p = intersects[ i ];
@@ -561,6 +604,14 @@ function createGraph(n_skewers) {
 			.attr('width', graphWidth).attr('height', graphHeight)
 			//.attr('fill', '#444444')
 			//.attr('opacity', 1)
+		ret.append('text')
+			.attr('class','graphNumber')
+			.attr('x',-15).attr('y',0)
+			.text(i+1)
+		ret.append('text')
+			.attr('class','skewerSaveInstructions')
+			.attr('x',columnWidth/4).attr('y',100)
+			.text('Press ' + (i+1) + ' to save selected skewer')
 		graphs[i] = ret;
 
 	}
@@ -571,18 +622,39 @@ function createGraph(n_skewers) {
 }
 
 function plotSkewerSpectra() {
+	// Want graph[0] to be the currently hovered over skewer
+	// Next graphs would appear as a button is pressed, similar to galaxies
+
 	i = prevCylOverIdx;
 
 	// sticky selection
 	let n = graphs.length;
-	//graphs.forEach((d) => {
 	for(w=0;w<n;w++){
 		let graph = graphs[w];
-
 		let k = skewer[i[w]],
 			spectra = d3.entries(skewerData.get(k));
 		let x = xScale(), y = yScale();
 
+		if(i[w] == -1){
+			graph.selectAll("graph" + w + "_border").remove()
+			d3.select('#details').select('#graph' + w).selectAll('g').selectAll('.yaxis').remove();
+			d3.select('#details').select('#graph' + w).selectAll('.xaxis').remove();
+			d3.select('#details').select('#graph' + w).selectAll('.title').remove();
+			d3.select('#details').select('#graph' + w).selectAll('#border').remove();
+			graph.selectAll('.penHI').remove()
+			graph.selectAll('.penCIV').remove()
+			graph.selectAll('.mark').remove()
+			graph.selectAll('.graphNumber').remove()
+			graph.selectAll('.skewerSaveInstructions').remove()
+			graph.append('text')
+				.attr('class','graphNumber')
+				.attr('x',-15).attr('y',0)
+				.text(w+1)
+			graph.append('text')
+				.attr('class','skewerSaveInstructions')
+				.attr('x',columnWidth/4).attr('y',100)
+				.text('Press ' + (w+1) + ' to save selected skewer')
+			}
 		if(i[w] != -1){
 			if (pointOverIdx != -1) {
 				let j = pointOverIdx,
@@ -595,6 +667,9 @@ function plotSkewerSpectra() {
 				d3.select('#details').select('#graph' + w).selectAll('#border').remove();
 				graph.selectAll('.penHI').remove()
 				graph.selectAll('.penCIV').remove()
+				graph.selectAll('.skewerSaveInstructions').remove()
+
+				
 
 				let pen = d3.line()
 					.x((d) => x(d.redshift))
@@ -611,13 +686,17 @@ function plotSkewerSpectra() {
 						//.attr('stroke', u.key == 'HI' ? '#9aeab9' : '#9aeab9' )
 						.attr('fill', 'none')
 					graph.append('rect')
-							.attr("id","border")
-							.attr("transform","translate(-40,-20)")
-							//.attr("x","15")
-							//.attr("y","10")
-							.attr("width",columnWidth)
-							//.attr("height",graphHeight+25)
-							//.attr("style","stroke: #5b5b5b;stroke-width: 50; fill: none;")
+						.attr("id","border")
+						.attr("transform","translate(-40,-20)")
+						//.attr("x","15")
+						//.attr("y","10")
+						.attr("width",columnWidth)
+						//.attr("height",graphHeight+25)
+						//.attr("style","stroke: #5b5b5b;stroke-width: 50; fill: none;")
+					graph.append('text')
+						.attr('class','graphNumber')
+						.attr('x',-15).attr('y',0)
+						.text(w+1)
 					let k = spectra.length - 6
 						if(k==1 && (u.key == 'HI' || u.key == 'CIV')){
 							graph.append('g').attr('class', 'yaxis')
@@ -686,7 +765,7 @@ function plotSkewerNeighbors() {
 				for (let j = 0; j < galaxies.length; ++j) {
 				let dist = p[j][2] // .distanceTo(galaxies[j].position)
 				let u = galaxies[j];
-				
+				// TODO: clean up this list by storing values in an array. Such as A[0] = 'dist' ...
 				if(boxWidth == 'dist'){
 					halfWidth = 1/(10*dist)
 				}
@@ -724,7 +803,7 @@ function plotSkewerNeighbors() {
 
 					graph.append('rect')
 						.attr('class', 'mark g'+j)
-						.attr('x', xScale()(distAlong))
+						.attr('x', xScale()(distAlong) - (halfWidth/2))
 						.attr('y', graphHeight/2 - halfSize)
 						// yScale(u.absorptionData.HI.fluxNorm[i_]) - 5
 						.attr('width', halfWidth)
@@ -733,6 +812,14 @@ function plotSkewerNeighbors() {
 						//.attr('opacity', 1 / (30*dist + 1))
 						//.attr('opacity', 1)
 						.datum(j)
+						.style('fill', (j) => {
+							if(currentGalaxy[1] && currentGalaxy[1] == (j)){
+								return('#ffaaaa')
+							}
+							if(selectedGalaxies.includes(j)){
+								return('#aaaaff')
+							}
+						})
 						/*.on('mouseover', (j) => {
 							pointOverIdx = j
 							selectPoint()
@@ -745,12 +832,11 @@ function plotSkewerNeighbors() {
 							selectPoint()
 							//plotSkewerSpectra()
 							plotGalaxyImage(pointOverIdx)
-							
+							plotSkewerSpectra() //make separate to update just neighbors
 						})
 						.on('mouseout', (j) =>{
 							prevPointOverIdx = j
 							unselectPoint()
-							plotSkewerSpectra()
 						})
 
 						
@@ -818,19 +904,19 @@ function plotGalaxyImage(idx){
 		*/
 		svg.append('img')
 			.attr('src', 'data/galaxyImages_partial/' + g.NSAID + '.jpg')
-			.attr('width', '200px')
+			.attr('height', '200px')
 		txt.selectAll('p')
 			.data(lines)
 			.enter()
 			.append('p')
 			.style('width','150px')
 			.text(d => d)
+		$( "div#selectedGalaxies" ).scrollLeft( 0 );
 		
 	}
 	d3.selectAll('.galaxyQueue')
 		.on('mouseover', (p) => {
-			
-			pointOverIdx = p //;
+			pointOverIdx = p
 			selectPoint()
 			d3.selectAll('.g'+idx)
 				.style('fill','red')
@@ -845,7 +931,7 @@ function plotGalaxyImage(idx){
 }
 
 function createSlider(init = distanceFromSkewer) {
-	let width = columnWidth - columnWidth/4, // FIXME: from columnWidth
+	let width = columnWidth - columnWidth/4,
 		pad = 20
 	d3.select('#details').selectAll('#neighbor-slider').remove();
 	let svg = d3.select('#details').append('div').attr('id','neighbor-slider').append('svg')
@@ -866,7 +952,7 @@ function createSlider(init = distanceFromSkewer) {
 
 	svg.append('text').attr('id', 'slider-value')
 		.attr('x', width).attr('y', 17.5)
-		.text(init + " kpc")
+		.text(init + " Mpc")
 		.style('fill', 'white')
 
 	let drag = d3.drag()
@@ -879,7 +965,7 @@ function createSlider(init = distanceFromSkewer) {
 				.attr('cx', x);
 			let value = scale.copy().invert(x);
 			svg.select('#slider-value')
-				.text(roundtothree(value)+ " kpc")
+				.text(roundtothree(value)+ " Mpc")
 
 			distanceFromSkewer = value
 			if (filterDistantGalaxies) {
