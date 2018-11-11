@@ -94,8 +94,8 @@ function loadGalaxyData(callback) {
 	d3.dsv(" ", galaxyFile, (d) => {
 		return {
 			'NSAID': d.NSAID,
-			'RA': d.RA,
-			'DEC': d.DEC,
+			'RA': +d.RA,
+			'DEC': +d.DEC,
 			'redshift': d.redshift,
 			'mstars' : d.mstars,
 			'sfr' : d.sfr,
@@ -103,7 +103,6 @@ function loadGalaxyData(callback) {
 			'rvir' : d.rvir,
 			'log_sSFR': d.log_sSFR,
 			'color': d.color,
-			'kpc_DA' : cosmcalc(d.redshift),
 			'position': sphericalToCartesian(d.RA,d.DEC,d.redshift)
 		}
 	}).then((data) => {
@@ -119,7 +118,8 @@ function loadProjections(){
 	})
 }
 
-function cosmcalc(z){ //takes in redshift
+function cosmcalc(distance){ //takes in redshift
+	let z = distance
 	var H0=73; // hubble constant
 	var WM=0.27;
 	var WV=0.73;
@@ -202,9 +202,9 @@ function cosmcalc(z){ //takes in redshift
 	}
     DCMT = ratio*DCMR
     DA = az*DCMT
-    DA_Mpc = (c/H0)*DA
+    DA_Mpc = (c/H0)*DA //plot distance in terms of this
     kpc_DA = DA_Mpc/206.264806
-    /*DA_Gyr = (Tyr/H0)*DA
+    DA_Gyr = (Tyr/H0)*DA
     DL = DA/(az*az)
     DL_Mpc = (c/H0)*DL
     DL_Gyr = (Tyr/H0)*DL
@@ -230,9 +230,8 @@ function cosmcalc(z){ //takes in redshift
 	}
     VCM = ratio*DCMR*DCMR*DCMR/3.
 	V_Gpc = 4.*Math.pi*((0.001*c/H0)**3)*VCM
-	*/
-	
-	return(kpc_DA)
+	return(DA_Mpc)
+	//
 }
 
 function roundtothree(s, round = true) {
@@ -306,28 +305,42 @@ function loadSkewerData(callback) {
 let computeProjections = () => {
 	// console.log('loaded so far:', skewerData.length, galaxies.length)
 	// TODO: progress bar for large datasets
-
 	skewer.forEach( (k) => {
 		let u = skewerData.get(k)
-		var galaxy_redshift_min = galaxies.reduce((min, p) => p.redshift < min ? p.redshift : min, galaxies[0].redshift)
-		var galaxy_redshift_max = galaxies.reduce((max, p) => p.redshift > max ? p.redshift : max, galaxies[0].redshift)
+		//var galaxy_redshift_min = galaxies.reduce((min, p) => p.redshift < min ? p.redshift : min, galaxies[0].redshift)
+		//var galaxy_redshift_max = galaxies.reduce((max, p) => p.redshift > max ? p.redshift : max, galaxies[0].redshift)
 
-		var startPoint = sphericalToCartesian(u.RA,u.DEC,galaxy_redshift_min).clone()
+		//var startPoint = sphericalToCartesian(u.RA,u.DEC,galaxy_redshift_min).clone()
 		//console.log(startPoint)
-		var endPoint = sphericalToCartesian(u.RA,u.DEC,galaxy_redshift_max).clone()
+		//var endPoint = sphericalToCartesian(u.RA,u.DEC,galaxy_redshift_max).clone()
 
-		let skewerLine = new THREE.Line3(startPoint, endPoint);
-
+		//let skewerLine = new THREE.Line3(startPoint, endPoint);
+		Number.prototype.toRad = function() {
+			return this * Math.PI / 180;
+		 }
 		let ret = galaxies.map( v => {
-			let p = skewerLine.closestPointToPoint(v.position, true) // clamped to line segment
-			return [v.NSAID,k, cosmcalc(v.position.distanceTo(p))] // < 6*boxRadius ? p : null
+			//v = galaxy, u = skewer
+			distance = haversine(u.DEC,v.DEC,u.RA,v.RA,v.redshift)
+
+			return [v.NSAID,k,distance]
 		}) // maintain array alignment (w/o wasting memory?)
 
 		// console.log(u, k, ret.map(u => u[1])) // a few skewers are far from everything
 		projections.push(ret)
+		//reds.sort(function(a, b){return a - b});
 	})
 }
 
+function haversine(dec1, dec2, ra1, ra2, redshift){
+	let lat1 = dec1.toRad()
+	let lat2 = dec2.toRad()
+	let dLat = (dec2-dec1).toRad()
+	let dLon = (ra2-ra1).toRad()
+	let a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) * Math.sin(dLon/2)
+	let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+	let distance = c * cosmcalc(redshift)
+	return distance
+}
 
 function exportData(name, text) {
 	const a = document.createElement('a');
@@ -441,7 +454,7 @@ function onKeyDown(event) {
 	}
 
 	else if( keyChar == 'D') {
-		//exportData('projections.json',JSON.stringify(projections))
+		exportData('projections.json',JSON.stringify(projections))
 	}
 
 	 /* else if ( keyChar  == 'G') {
@@ -665,6 +678,9 @@ function plotSkewerSpectra() {
 				d3.select('#details').select('#graph' + w).selectAll('.xaxis').remove();
 				d3.select('#details').select('#graph' + w).selectAll('.title').remove();
 				d3.select('#details').select('#graph' + w).selectAll('#border').remove();
+
+				graph.selectAll('.graphNumber').remove()
+				graph.selectAll('.skewerSaveInstructions').remove()
 				graph.selectAll('.penHI').remove()
 				graph.selectAll('.penCIV').remove()
 				graph.selectAll('.skewerSaveInstructions').remove()
@@ -764,37 +780,41 @@ function plotSkewerNeighbors() {
 			if(p){
 				for (let j = 0; j < galaxies.length; ++j) {
 				let dist = p[j][2] // .distanceTo(galaxies[j].position)
+				
 				let u = galaxies[j];
 				// TODO: clean up this list by storing values in an array. Such as A[0] = 'dist' ...
-				if(boxWidth == 'dist'){
-					halfWidth = 1/(10*dist)
-				}
-				else if(boxWidth == 'rvir'){
-					halfWidth = 10*u.rvir
-				}
-				else if(boxWidth == 'sfr'){
-					halfWidth = 10*u.sfr
-				}
-				else if(boxWidth == 'mstars'){
-					halfWidth = 2*u.mstars
-				}
-				else if(boxWidth == 'onePx'){
-					halfWidth = 1
-				}
-				if(boxHeight == 'dist'){
-					halfSize = 1/(10*dist)
-				}
-				else if(boxHeight == 'rvir'){
-					halfSize = 10*u.rvir
-				}
-				else if(boxHeight == 'sfr'){
-					halfSize = 10*u.sfr
-				}
-				else if(boxHeight == 'mstars'){
-					halfSize = 2*u.mstars
-				}
-				if (dist < distanceFromSkewer / boxRadius && u.redshift < depthDomain[1] && u.redshift > depthDomain[0]) { // filter, then map
+				
+				//if (dist < distanceFromSkewer / boxRadius && u.redshift < depthDomain[1] && u.redshift > depthDomain[0]) { // filter, then map
+				if (dist < distanceFromSkewer) { // filter, then map
 					let distAlong = u.redshift
+
+					if(boxWidth == 'dist'){
+						halfWidth = 10/(dist)
+					}
+					else if(boxWidth == 'rvir'){
+						halfWidth = 10*u.rvir
+					}
+					else if(boxWidth == 'sfr'){
+						halfWidth = 10*u.sfr
+					}
+					else if(boxWidth == 'mstars'){
+						halfWidth = 2*u.mstars
+					}
+					else if(boxWidth == 'onePx'){
+						halfWidth = 1
+					}
+					if(boxHeight == 'dist'){
+						halfSize = 10/(dist)
+					}
+					else if(boxHeight == 'rvir'){
+						halfSize = 10*u.rvir
+					}
+					else if(boxHeight == 'sfr'){
+						halfSize = 10*u.sfr
+					}
+					else if(boxHeight == 'mstars'){
+						halfSize = 2*u.mstars
+					}
 					
 					//let halfWidth = u.rvir*2
 					//let halfWidth = 10/(u.mstars)
@@ -947,7 +967,7 @@ function createSlider(init = distanceFromSkewer) {
 
 	let scale = d3.scaleLinear()
 		.range([pad, width - pad])
-		.domain([0.0, 2])
+		.domain([0.0, 10.0])
 		.clamp(true);
 
 	svg.append('text').attr('id', 'slider-value')
@@ -1229,8 +1249,9 @@ function filterGalaxiesNearSkewers() {
 
 	for (var s = 0; s < skewer.length; s++) {
 		let mask = projections[s]
-					.map(v => v[1] // .distanceTo(galaxies[i].position)
-									<= distanceFromSkewer / boxRadius ? 1 : 0);
+					.map(v => v[2] // .distanceTo(galaxies[i].position)
+									<= distanceFromSkewer ? 1 : 0);
+									//<= distanceFromSkewer / boxRadius ? 1 : 0);
 					// TODO: refactor
 		for (var g = 0; g < galaxies.length; g++)
 			if (mask[g])
