@@ -15,25 +15,18 @@ var cylinderGroup, // parallel to 'skewer'
 var galaxies = [];
 var skewer = [];
 var skewerData = new Map();
-
 var tex1 = new THREE.TextureLoader().load( "blur.png" );
-// var loader = new THREE.FileLoader();
-
 var optionFile = 'options.txt';
 
 // mutable params
 var galaxyFile, skewerFile;
 var galaxyRvirScalar = 0.5;
-
-// var skewerWidth = 0.06;
-
 var galaxyRedHSL = "hsl(0, 90%, 50%)";
 var galaxyBlueHSL = "hsl(200, 70%, 50%)";
 var skewerAbsorptionMinHSL = "hsl(100, 90%, 50%)";
 var skewerAbsorptionMaxHSL = "hsl(280, 90%, 60%)";
 var showLabels = true;
 var cameraFocalPoint;
-// = new THREE.Vector3(0,0,0);
 
 // immutable params
 var boxRadius = 30;
@@ -41,12 +34,12 @@ var skewerLinearFiltering = false;
 
 // internal mutables - pass as arguments, avoid direct use.
 var filterDistantGalaxies = false;
-var distanceFromSkewer = 0.5;
-	// Determines a distance for toggling on and off galaxies near Skewers
+var distanceFromSkewer = 0.5; // Determines a distance for toggling on and off galaxies near Skewers
 
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
 
+//initializes the selected galaxies/skewers
 var pointOverIdx = -1;
 var prevPointOverIdx = -1;
 var cylOverIdx = -1;
@@ -54,32 +47,60 @@ var cylOverIdx = -1;
 //sets the size of the space on the right side of the screen
 let columnWidth = self.innerWidth/3;
 let graphHeight = 200;
-let depthDomain = [.017, .029];
+
+//sets the x-range domain of graphs
+let depthDomain = [.017, .029]; 
+
 
 //graph initialization
-let n_skewers = 9;
-var prevCylOverIdx = [];
-for(i=0;i<n_skewers;i++){
+let n_skewers = 10; //sets the number of graphs available
+var prevCylOverIdx = []; //keeps track of skewers that are selected
+for(i=0;i<n_skewers;i++){ //initializes selected skewer idx
 	prevCylOverIdx.push(-1);
 }
+let graphs = createGraph(n_skewers);
+
+//initializes skewer neighbor box sizes
 var boxHeight = 'rvir';
 var boxWidth = 2;
-
 var halfWidth = boxWidth;
 var halfSize = 10;
 
+//initialize selected galaxies
 var currentGalaxy;
 var selectedGalaxies = [];
+var trigger = false; //used for storing galaxies
 
-var trigger = false;
-
+//initialize selected skewers
 var cyl = [];
 var cyl_0;
 
+//initialize projection matrix (galaxies -> skewer distances)
 var projections = [];
+var z_d = loadLookUp()
 
 
-let graphs = createGraph(n_skewers);
+//used to generate redshift lookup table, now called from file in loadLookUp() function
+/*
+var z_r = _.range(0.01600,0.03000,0.00001)
+var z_d = []
+z_r.forEach(function(d){ 
+	let z = {
+		z: roundtofive(d),
+		d: cosmcalc(d)
+	}
+	z_d.push(z)
+})*/
+
+//finds distance conversion based on redshift value in lookup array
+//z: redshift
+//d: distance in Mpc
+function lookUp(redshift){
+	var found = z_d.find(function(element){
+		return element["z"] === redshift
+	})
+	return found["d"]
+}
 
 let xScale = () => d3.scaleLinear().domain(depthDomain).range([0, columnWidth - 50]),
 	yScale = () => d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
@@ -87,8 +108,8 @@ let xScale = () => d3.scaleLinear().domain(depthDomain).range([0, columnWidth - 
 init();
 animate();
 
-// TODO: attach dat.gui to scales?
-// FIXME: load from files specified in
+
+
 
 function loadGalaxyData(callback) {
 	d3.dsv(" ", galaxyFile, (d) => {
@@ -96,7 +117,7 @@ function loadGalaxyData(callback) {
 			'NSAID': d.NSAID,
 			'RA': +d.RA,
 			'DEC': +d.DEC,
-			'redshift': d.redshift,
+			'redshift': +d.redshift,
 			'mstars' : d.mstars,
 			'sfr' : d.sfr,
 			'sfr_err' : d.sfr_err,
@@ -112,14 +133,27 @@ function loadGalaxyData(callback) {
 	});
 }
 
+//deprecated with redshift/distance lookup array
+/*
 function loadProjections(){
 	d3.json(projectionData).then(function(d){
 		projections = d
 	})
+}*/
+
+//loads the lookUp file containing redshift -> distance
+function loadLookUp(){
+	d3.json('data/projections/lookUp.json').then(function(d){
+		z_d = d
+	})
 }
 
-function cosmcalc(distance){ //takes in redshift
-	let z = distance
+//calculates distance in Mpc from redshift
+//deprecated with lookUp table
+/* 
+function cosmcalc(redshift){ //takes in redshift
+	
+	let z = redshift
 	var H0=73; // hubble constant
 	var WM=0.27;
 	var WV=0.73;
@@ -181,7 +215,7 @@ function cosmcalc(distance){ //takes in redshift
     DCMR_Gyr = (Tyr/H0)*DCMR
 	DCMR_Mpc = (c/H0)*DCMR
 	
-// tangential comoving distance
+	// tangential comoving distance
 
     let ratio = 1.00
     let x = Math.sqrt(Math.abs(WK))*DCMR
@@ -209,7 +243,7 @@ function cosmcalc(distance){ //takes in redshift
     DL_Mpc = (c/H0)*DL
     DL_Gyr = (Tyr/H0)*DL
 
-  // comoving volume computation
+  	// comoving volume computation
 
     ratio = 1.00
     x = Math.sqrt(Math.abs(WK))*DCMR
@@ -231,25 +265,32 @@ function cosmcalc(distance){ //takes in redshift
     VCM = ratio*DCMR*DCMR*DCMR/3.
 	V_Gpc = 4.*Math.pi*((0.001*c/H0)**3)*VCM
 	return(DA_Mpc)
-	//
 }
+*/
 
+//rounding function to 3 decimal places
 function roundtothree(s, round = true) {
-	// FIXME: must agree with rounding to 3 digits during file generation
-	// return +parseFloat(s).toFixed(3)
 	let v = parseFloat(s)
 	return round ? Math.round(1000 * v) / 1000.0 : v
 }
 
+
+//rounding function to 5 decimal places (used due to floating point error with javascript)
+//deprecated with lookUp table
+/*
+function roundtofive(s, round = true) {
+	let v = parseFloat(s)
+	return round ? Math.round(100000 * v) / 100000.0 : v
+}
+*/
+
 function loadSkewerData(callback) {
 
-	let f = roundtothree
+	//let f = roundtothree
 
 	d3.dsv(' ', skewerFile, (d) => {
-		return { // name x1 y1 z1 x2 y2 z2
+		return {
 			'name': d.name,
-			'start': new THREE.Vector3(f(d.x1), f(d.y1), f(d.z1)),
-			'end': new THREE.Vector3(f(d.x2), f(d.y2), f(d.z2)),
 			'RA': +d.RA,
 			'DEC': +d.DEC
 		}
@@ -257,16 +298,12 @@ function loadSkewerData(callback) {
 		data.forEach( (d) => {
 			skewer.push(d.name)
 			//plotSkewer immediately or else scene graph group will not be aligned with skewer
-			//plotSkewer(d.name, d.start.clone().multiplyScalar(boxRadius),
-								//d.end.clone().multiplyScalar(boxRadius))
 			plotSkewer(d.name,d.RA, d.DEC)
 			let file = [d.name] + '.dat'
 			//for full data set:
 			//let file = d.name + '.dat'
 			let spectra = ['HI', 'CIV']
 			skewerData.set(d.name, {
-				'start': d.start,
-				'end': d.end,
 				'RA': +d.RA,
 				'DEC': +d.DEC,
 				'startPoint': sphericalToCartesian(d.RA,d.DEC,galaxy_redshift_min).clone(),
@@ -276,24 +313,17 @@ function loadSkewerData(callback) {
 			// individual reads of each element
 			spectra.forEach( (el) => {
 				let path = 'data/spectra_' + el + '_partial_norm/'
-				//for full data set:
-				//let path = 'data/spectra_' + el + '_norm/'
 				d3.dsv(' ', path + file, (d) => {
-					// x y z dist_scaled dist_frac flux_norm
 					return {
-						// VERIFY x,y,z recoverable from start_point, dist_scaled
-						//'dist_scaled': parseFloat(dee.dist_scaled),
-						//'dist_scaled': +spectraScale(d.dist_scaled), //delete when redshift values is added to spectra
 						'flux_norm': parseFloat(d.flux_norm),
 						'redshift': d.redshift,
 						'wavelength': d.wavelength
 					}
 				}).then( (data) => {
 					if (data.length > 1) { // CATCH sentinel values
-
 						skewerData.get(d.name)[el] = data // register to model
 						if (el === 'HI')
-							createAbsorptionDataTexture(d.name)
+							createAbsorptionDataTexture(d.name) //creates texture on skewer cylinders
 					}
 				})
 			})
@@ -302,46 +332,37 @@ function loadSkewerData(callback) {
 	})
 }
 
+//computes distance between every galaxy and every skewer
 let computeProjections = () => {
-	// console.log('loaded so far:', skewerData.length, galaxies.length)
-	// TODO: progress bar for large datasets
 	skewer.forEach( (k) => {
 		let u = skewerData.get(k)
-		//var galaxy_redshift_min = galaxies.reduce((min, p) => p.redshift < min ? p.redshift : min, galaxies[0].redshift)
-		//var galaxy_redshift_max = galaxies.reduce((max, p) => p.redshift > max ? p.redshift : max, galaxies[0].redshift)
-
-		//var startPoint = sphericalToCartesian(u.RA,u.DEC,galaxy_redshift_min).clone()
-		//console.log(startPoint)
-		//var endPoint = sphericalToCartesian(u.RA,u.DEC,galaxy_redshift_max).clone()
-
-		//let skewerLine = new THREE.Line3(startPoint, endPoint);
+		//convert degrees to radians for use in Math.trig functions
 		Number.prototype.toRad = function() {
 			return this * Math.PI / 180;
 		 }
 		let ret = galaxies.map( v => {
 			//v = galaxy, u = skewer
 			distance = haversine(u.DEC,v.DEC,u.RA,v.RA,v.redshift)
-
 			return [v.NSAID,k,distance]
-		}) // maintain array alignment (w/o wasting memory?)
-
-		// console.log(u, k, ret.map(u => u[1])) // a few skewers are far from everything
+		})
 		projections.push(ret)
-		//reds.sort(function(a, b){return a - b});
 	})
 }
 
+//used to calculate angular distance from projection computation
 function haversine(dec1, dec2, ra1, ra2, redshift){
+	let z = lookUp(redshift) //converts redshift to meaningful distance in Mpc
 	let lat1 = dec1.toRad()
 	let lat2 = dec2.toRad()
 	let dLat = (dec2-dec1).toRad()
 	let dLon = (ra2-ra1).toRad()
 	let a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) * Math.sin(dLon/2)
 	let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-	let distance = c * cosmcalc(redshift)
+	let distance = c * z
 	return distance
 }
 
+//able to export an array to .json file for faster retrieval
 function exportData(name, text) {
 	const a = document.createElement('a');
 	const type = name.split(".").pop();
@@ -350,125 +371,130 @@ function exportData(name, text) {
 	a.click();
 }
 
-
 // EVENT HANDLERS
 function onKeyDown(event) {
 
-    var keyChar = String.fromCharCode(event.keyCode);
-
-    if ( keyChar  == 'S') {
-		cylinderGroup.visible = !cylinderGroup.visible;
-		cylinderBackGroup.visible = !cylinderBackGroup.visible;
-	}
-	else if ( keyChar  == 'T') {
-		textGroup.visible = !textGroup.visible;
-	}	
-	else if ( keyChar == 'G') {
+	var keyChar = String.fromCharCode(event.keyCode);
+	
+	//export an array to json file
+	/*
+	if( keyChar == 'D') {
+		exportData('lookUp.json',JSON.stringify(z_d)) //currently set to save the lookUp table
+	}*/
+	
+	
+	//store selected galaxy on bottom panel
+	//does not allow duplicate galaxies
+	if ( keyChar == 'G') {
 		if(!selectedGalaxies.includes(currentGalaxy[1])){
 			d3.select('#bottom-panel').selectAll('#imageSaveInstructions').remove()
 			selectedGalaxies.push(currentGalaxy[1])
 			trigger = true;
 			plotGalaxyImage(currentGalaxy[1],trigger)
 			trigger = false;
-		}
+		}	
 	}
+
+	//toggles galaxies near skewers
+	//same functionality as double clicking on slider circle
+	else if ( keyChar == 'N') {
+	    toggleGalaxiesNearSkewers(); // skewers, distanceFromSkewer
+	}
+	
+	//toggle skewer visibility in 3D view
+	else if ( keyChar  == 'S') {
+		cylinderGroup.visible = !cylinderGroup.visible;
+		cylinderBackGroup.visible = !cylinderBackGroup.visible;
+	}
+
+	//toggle text visibility in 3D view
+	else if ( keyChar  == 'T') {
+		textGroup.visible = !textGroup.visible;
+	}	
+
+	//on numerical key press, stores selected skewer to that graph
 	else if ( keyChar == '1') {
-		if(prevCylOverIdx[0] == -1){
-			prevCylOverIdx[0] = cylOverIdx;
-		}
-		else{
-			prevCylOverIdx[0] = -1
-		}
-		plotSkewerSpectra();
-	}
-	else if ( keyChar == '2') {
 		if(prevCylOverIdx[1] == -1){
-			prevCylOverIdx[1] = cylOverIdx;
+			prevCylOverIdx[1] = prevCylOverIdx[0];
 		}
 		else{
 			prevCylOverIdx[1] = -1
 		}
 		plotSkewerSpectra();
 	}
-	else if ( keyChar == '3') {
+	else if ( keyChar == '2') {
 		if(prevCylOverIdx[2] == -1){
-			prevCylOverIdx[2] = cylOverIdx;
+			prevCylOverIdx[2] = prevCylOverIdx[0];
 		}
 		else{
 			prevCylOverIdx[2] = -1
 		}
-		plotSkewerSpectra();	}
-	else if ( keyChar == '4') {
+		plotSkewerSpectra();
+	}
+	else if ( keyChar == '3') {
 		if(prevCylOverIdx[3] == -1){
-			prevCylOverIdx[3] = cylOverIdx;
+			prevCylOverIdx[3] = prevCylOverIdx[0];
 		}
 		else{
 			prevCylOverIdx[3] = -1
 		}
-		plotSkewerSpectra();	
-	}		
-	else if ( keyChar == '5') {
+		plotSkewerSpectra();	}
+	else if ( keyChar == '4') {
 		if(prevCylOverIdx[4] == -1){
-			prevCylOverIdx[4] = cylOverIdx;
+			prevCylOverIdx[4] = prevCylOverIdx[0];
 		}
 		else{
 			prevCylOverIdx[4] = -1
 		}
 		plotSkewerSpectra();	
-	}
-	else if ( keyChar == '6') {
+	}		
+	else if ( keyChar == '5') {
 		if(prevCylOverIdx[5] == -1){
-			prevCylOverIdx[5] = cylOverIdx;
+			prevCylOverIdx[5] = prevCylOverIdx[0];
 		}
 		else{
 			prevCylOverIdx[5] = -1
 		}
 		plotSkewerSpectra();	
 	}
-	else if ( keyChar == '7') {
+	else if ( keyChar == '6') {
 		if(prevCylOverIdx[6] == -1){
-			prevCylOverIdx[6] = cylOverIdx;
+			prevCylOverIdx[6] = prevCylOverIdx[0];
 		}
 		else{
 			prevCylOverIdx[6] = -1
 		}
 		plotSkewerSpectra();	
 	}
-	else if ( keyChar == '8') {
+	else if ( keyChar == '7') {
 		if(prevCylOverIdx[7] == -1){
-			prevCylOverIdx[7] = cylOverIdx;
+			prevCylOverIdx[7] = prevCylOverIdx[0];
 		}
 		else{
 			prevCylOverIdx[7] = -1
 		}
 		plotSkewerSpectra();	
 	}
-	else if ( keyChar == '9') {
+	else if ( keyChar == '8') {
 		if(prevCylOverIdx[8] == -1){
-			prevCylOverIdx[8] = cylOverIdx;
+			prevCylOverIdx[8] = prevCylOverIdx[0];
 		}
 		else{
 			prevCylOverIdx[8] = -1
 		}
 		plotSkewerSpectra();	
 	}
-
-	else if( keyChar == 'D') {
-		exportData('projections.json',JSON.stringify(projections))
-	}
-
-	 /* else if ( keyChar  == 'G') {
-	    for (var g = 0; g < galaxies.length; g++) {
-		var galaxy = galaxies[g];
-		galaxy.isVisible = true;
-		boxOfPoints.geometry.attributes.isVisible.array[g] = 1.0;
-		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
+	else if ( keyChar == '9') {
+		if(prevCylOverIdx[9] == -1){
+			prevCylOverIdx[9] = prevCylOverIdx[0];
 		}
-	}*/ 
-	else if ( keyChar == 'N') {
-	    toggleGalaxiesNearSkewers(); // skewers, distanceFromSkewer
-    }
+		else{
+			prevCylOverIdx[9] = -1
+		}
+		plotSkewerSpectra();	
+	}
 };
+
 
 function selectPoint() {
 	var cs = boxOfPoints.geometry.attributes.isSelected.array;
@@ -478,6 +504,8 @@ function selectPoint() {
 	cs[pointOverIdx] = 1.0;
 	prevPointOverIdx = pointOverIdx;
 	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+	
+	//updates color of selected skewer neighbor (galaxy) to red when hovered over
 	d3.selectAll('.mark')
 		.on('mouseover', (j) => {
 			d3.selectAll('.g'+pointOverIdx)
@@ -490,11 +518,6 @@ function unselectPoint() {
 	for (var p = 0; p < cs.length; p++) {
 		cs[p] = 0.0;
 	}
-	/*d3.selectAll('.mark')
-		.on('mouseout', (j) => {
-			d3.selectAll('.mark')
-				.style('fill','white')
-		})*/
 	prevPointOverIdx = -1;
 	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
 	
@@ -546,6 +569,7 @@ function onMouseMove( event ) {
 		var p = intersects[ i ];
 
 		// greedy fuzzy select?
+		// adjust this when changing scale of the galaxies
 		if (p.object.type == "Points" && p.distanceToRay < 0.00009) {
 			pointOverIdx = p.index;
 			break;
@@ -556,9 +580,6 @@ function onMouseMove( event ) {
 		// mouse is over new point; show galaxy details
 		selectPoint();
 		plotSkewerSpectra();
-		/*d3.selectAll('.g'+pointOverIdx)
-				.style('fill','red')
-		*/
 		plotGalaxyImage(pointOverIdx); // fire once for each new hover
 	}
 	if (pointOverIdx < 0 && prevPointOverIdx >= 0) {
@@ -568,26 +589,17 @@ function onMouseMove( event ) {
 
 	//intersect with skewers
 	intersects = raycaster.intersectObjects( cylinderGroup.children );
-	//checks to see if the skewer you are over is already contained within prevCylOverIdx, as to prevent graphs flipping
-	let n = n_skewers;
-
-	/*
-	if (cylOverIdx != -1 && !prevCylOverIdx.includes(cylOverIdx)){
-		prevCylOverIdx.pop()
-		prevCylOverIdx.unshift(cylOverIdx)
+	//checks to see if there is a skewer selected, which updates the first graph
+	if (cylOverIdx != -1){
+		prevCylOverIdx[0]=cylOverIdx
+		plotSkewerSpectra()
 	}
 	cylOverIdx = -1;
-	*/
-
+	
 	for ( var i = 0; i < intersects.length; i++ ) {
 		var p = intersects[ i ];
-
 		if ( cylinderGroup.visible == true && p.object.type == "Mesh") {
 			cylOverIdx = cylinderGroup.children.indexOf(p.object) // recompute index to recover model object
-			//console.log('skewers['+cylOverIdx+']', p);
-
-			// cylOverLoc = p.point; // EXPECT offset by radius from actual position along skewer.
-	//		break;
 		}
 	}
 
@@ -598,11 +610,9 @@ function onMouseMove( event ) {
 	}
 }
 
+//initializes the graphs
 function createGraph(n_skewers) {
 	let graphWidth = columnWidth - 50
-	/*d3.select('#n-graphs').on('change', function(a){
-		n_skewers = d3.select(this).property('value');
-	})*/
 	let n = n_skewers;
 	var graphs = [];
 	for(i=0;i<n;i++){
@@ -615,32 +625,27 @@ function createGraph(n_skewers) {
 			.attr('class','graph-background')
 			.attr('x', 0).attr('y', 0)
 			.attr('width', graphWidth).attr('height', graphHeight)
-			//.attr('fill', '#444444')
-			//.attr('opacity', 1)
-		ret.append('text')
-			.attr('class','graphNumber')
-			.attr('x',-15).attr('y',0)
-			.text(i+1)
-		ret.append('text')
-			.attr('class','skewerSaveInstructions')
-			.attr('x',columnWidth/4).attr('y',100)
-			.text('Press ' + (i+1) + ' to save selected skewer')
+		if(i>0){	
+			ret.append('text')
+				.attr('class','graphNumber')
+				.attr('x',-15).attr('y',0)
+				.text(i)
+			ret.append('text')
+				.attr('class','skewerSaveInstructions')
+				.attr('x',columnWidth/4).attr('y',100)
+				.text('Press ' + (i) + ' to save selected skewer')
+		}
 		graphs[i] = ret;
 
 	}
 	createBrush()
 	createSlider()
-	plotHistogram()
 	return graphs
 }
 
+
 function plotSkewerSpectra() {
-	// Want graph[0] to be the currently hovered over skewer
-	// Next graphs would appear as a button is pressed, similar to galaxies
-
 	i = prevCylOverIdx;
-
-	// sticky selection
 	let n = graphs.length;
 	for(w=0;w<n;w++){
 		let graph = graphs[w];
@@ -659,15 +664,18 @@ function plotSkewerSpectra() {
 			graph.selectAll('.mark').remove()
 			graph.selectAll('.graphNumber').remove()
 			graph.selectAll('.skewerSaveInstructions').remove()
-			graph.append('text')
+			if(w>0){
+				graph.append('text')
 				.attr('class','graphNumber')
 				.attr('x',-15).attr('y',0)
-				.text(w+1)
+				.text(w)
 			graph.append('text')
 				.attr('class','skewerSaveInstructions')
 				.attr('x',columnWidth/4).attr('y',100)
-				.text('Press ' + (w+1) + ' to save selected skewer')
+				.text('Press ' + (w) + ' to save selected skewer')
 			}
+			
+		}
 		if(i[w] != -1){
 			if (pointOverIdx != -1) {
 				let j = pointOverIdx,
@@ -704,39 +712,40 @@ function plotSkewerSpectra() {
 					graph.append('rect')
 						.attr("id","border")
 						.attr("transform","translate(-40,-20)")
-						//.attr("x","15")
-						//.attr("y","10")
-						.attr("width",columnWidth)
-						//.attr("height",graphHeight+25)
+						.attr("width",columnWidth+20)
+						.attr("height",graphHeight)
 						//.attr("style","stroke: #5b5b5b;stroke-width: 50; fill: none;")
-					graph.append('text')
+					if(w>0){
+						graph.append('text')
 						.attr('class','graphNumber')
 						.attr('x',-15).attr('y',0)
-						.text(w+1)
-					let k = spectra.length - 6
+						.text(w)
+					}
+					let k = spectra.length - 4
 						if(k==1 && (u.key == 'HI' || u.key == 'CIV')){
 							graph.append('g').attr('class', 'yaxis')
 								.attr('stroke', 'white')
 								//.call(d3.axisLeft(y))
 								.append('text')
 								.attr("transform", "translate(-10," + graphHeight/2 + ") rotate(-90)")
-			      		.style("text-anchor", "middle")
+			      				.style("text-anchor", "middle")
 								.text(u.key);
 						}
 						else if(k==2){
+							d3.select('#details').select('#graph' + w).selectAll('g').selectAll('.yaxis').remove();
 							graph.selectAll('.penHI').attr("transform","translate(0," + graphHeight/4 + ")")
 							graph.selectAll('.penCIV').attr("transform","translate(0," + (-1)*graphHeight/4 + ")")
 								graph.append('g').attr('class', 'yaxis')
 									.attr('stroke', 'white')
 									.append('text')
 									.attr("transform", "translate(-10," + 3*graphHeight/4 + ") rotate(-90)")
-				      		.style("text-anchor", "middle")
+				 		     		.style("text-anchor", "middle")
 									.text('HI');
 								graph.append('g').attr('class', 'yaxis')
 									.attr('stroke', 'white')
 									.append('text')
 									.attr("transform", "translate(-10," + graphHeight/4 + ") rotate(-90)")
-				      		.style("text-anchor", "middle")
+				      				.style("text-anchor", "middle")
 									.text('CIV');
 							}
 						d3.selectAll('text')
@@ -867,10 +876,6 @@ function plotSkewerNeighbors() {
 	}
 }
 
-function plotHistogram(){
-
-}
-
 function plotGalaxyImage(idx){
 
 	var g = galaxies[idx]
@@ -913,15 +918,6 @@ function plotGalaxyImage(idx){
 		var svg = d3.select('#selectedGalaxies').append('div')
 			.attr('id','galaxyImage' + g.NSAID)
 			.attr('class','galaxyQueue')
-		//txt.select('div').remove()
-		//svg.select('div').remove()
-	
-		/*txt.selectAll('p')
-			.data(lines)
-			.enter()
-				.append('p')
-				.text(d => d)
-		*/
 		svg.append('img')
 			.attr('src', 'data/galaxyImages_partial/' + g.NSAID + '.jpg')
 			.attr('height', '200px')
@@ -961,9 +957,6 @@ function createSlider(init = distanceFromSkewer) {
 		.attr('x', pad).attr('y', 12.5)
 		.attr('width', width - 2*pad).attr('height', 5)
 		.style('fill', 'gray')
-		/* .on('click', () => {
-			apply(d3.event.x) // WIP - needs context of the slider handle.
-		}) */
 
 	let scale = d3.scaleLinear()
 		.range([pad, width - pad])
@@ -1076,8 +1069,6 @@ function createBrush() {
 				plotSkewerNeighbors()
 			}
 		}
-		// domain[0] = Math.round(domain[0]);
-		// domain[1] = Math.round(domain[1]);
 	}
 }
 
@@ -1087,6 +1078,7 @@ function processOptions(callback) {
 		'skewerData': (v) => {skewerFile = v},
 		'galaxyData': (v) => {galaxyFile = v},
 		'projectionData': (v) => {projectionData = v},
+		'lookUpTable': (v) => {lookUpTable = v},
 		'galaxyRvirScalar': (v) => {galaxyRvirScalar = parseFloat(v)},
 		'galaxyRedHSL': (v) => {galaxyRedHSL = v},
 		'galaxyBlueHSL': (v) => {galaxyBlueHSL = v},
@@ -1130,17 +1122,13 @@ function sphericalToCartesian(RA,DEC,redshift) {
 	var theta = RA * (Math.PI/180)
 	var phi = DEC * (Math.PI/180)
 	var r = redshift
-
 	var sph_pos = new THREE.Spherical(r,phi,theta)
 		//Spherical( radius : Float, phi POLAR : Float, theta EQUATOR : Float )
 		//PHI AND THETA ARE SWAPPED (physics vs math notation)
 	var x = sph_pos.radius*Math.cos(sph_pos.phi)*Math.sin(sph_pos.theta)
 	var y = sph_pos.radius*Math.cos(sph_pos.phi)*Math.cos(sph_pos.theta)
 	var z = sph_pos.radius*Math.sin(sph_pos.phi)
-
 	var cartesian_position = new THREE.Vector3(x,y,z)
-	//console.log(sph_pos)
-
 	return cartesian_position;
 }
 
@@ -1160,29 +1148,15 @@ function processGalaxyData(data) {
 		visibles[ i ] = 1.0;
 
 		let u = data[i];
-		var id = u.NSAID;
 
 		var vertex = data[i].position.clone()
-		//console.log(sphericalToCartesian(u.RA,u.DEC,u.redshift))
-		//var vertex = u.position.clone();
-
-		//vertex.multiplyScalar(boxRadius)
 		vertex.toArray( positions, i * 3 );
 
 		colors[i] = u.color == "red" ? 0 :
 					  u.color == "blue" ? 1 : 2
 		// wasn't equality test b/c carriage returns vary (but d3 normalizes?)
 
-		// if (i == 1) console.log(cells)
-
-		var galaxyRvir = u.rvir;
-		sizes[i] = galaxyRvir; // * galaxyRvirScalar;
-		// moved this to the uniforms in the shaderMaterial,
-		// multiplication now happens in the vertex shader
-
-		// let g = new Galaxy(id,
-		// new THREE.Vector3(vertex.x, vertex.y, vertex.z), galaxyColor);
-		// galaxies.push(g);
+		sizes[i] = u.rvir;
 	}
 	// console.log(colors);
 	// console.log(sizes);
@@ -1367,24 +1341,7 @@ function plotSkewer(name, RA, DEC){
 
 }
 
-/*
-function recreate_Skewers(){
-	scene.remove(cylinderGroup); // taking out all the skewers
-
-	// cylinderGroup.forEach(u => u.dispose()); // FIXME: memory leak
-	cylinderGroup = null;
-	cylinderGroup = new THREE.Group(); // resetting cylinderGroup so that it is empty
-
-	skewerData.forEach( (d) => {
-		plotSkewer(d.name, d.start.clone().multiplyScalar(boxRadius),
-							d.end.clone().multiplyScalar(boxRadius))
-	})
-	scene.add( cylinderGroup );
-}
-*/
-
 function init() {
-
 	renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( window.innerWidth - columnWidth, window.innerHeight - 200 );
@@ -1407,8 +1364,8 @@ function init() {
 
 	processOptions(() => { // need parameters to load first
 		loadGalaxyData( () =>
-			//loadSkewerData( computeProjections )); // need skewer and galaxy data before taking projections
-			loadSkewerData( loadProjections )); // need skewer and galaxy data before taking projections
+			loadSkewerData( computeProjections )); // need skewer and galaxy data before taking projections
+			//loadSkewerData( loadProjections )); // need skewer and galaxy data before taking projections
 		displayGui();
 	});
 
@@ -1479,15 +1436,6 @@ function displayGui(){
 		boxOfPoints.material.uniforms.blueColor.value = new THREE.Color(value[0]/255, value[1]/255, value[2]/255);
 	});
 
-	/*
-	skewerWidthChange.onFinishChange(function(value){
-		//console.log(cylinderGroup);
-		//console.log("skewerWidthChange");
-		skewerWidth = value;
-		recreate_Skewers();
-
-	});
-	*/
 	skewerMinAbs.onChange(function(value){
 		//console.log(value);
 		skewerAbsorptionMinHSL = "rgb("+Math.round(value[0])+" ,"+Math.round(value[1])+" ,"+Math.round(value[2])+")";
