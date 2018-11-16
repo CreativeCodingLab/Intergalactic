@@ -2,6 +2,13 @@
 //In coordination with the CreativeCodingLab and the Astrophysics department at UCSC
 //Jasmine Otto, David Abramov, Joe Burchett (Astrophysics), Angus Forbes
 
+
+/*
+questions for Joe
+	What do the galaxy colors mean? (red vs blue)
+	What are the units of rvir?
+*/
+var z_d = loadLookUp()
 // instantiate once
 var renderer, scene, camera, controls;
 var gui, guiParams;
@@ -77,7 +84,8 @@ var cyl_0;
 
 //initialize projection matrix (galaxies -> skewer distances)
 var projections = [];
-var z_d = loadLookUp()
+
+
 
 
 //used to generate redshift lookup table, now called from file in loadLookUp() function
@@ -92,22 +100,15 @@ z_r.forEach(function(d){
 	z_d.push(z)
 })*/
 
-//finds distance conversion based on redshift value in lookup array
-//z: redshift
-//d: distance in Mpc
-function lookUp(redshift){
-	var found = z_d.find(function(element){
-		return element["z"] === redshift
-	})
-	return found["d"]
-}
 
 let xScale = () => d3.scaleLinear().domain(depthDomain).range([0, columnWidth - 50]),
-	yScale = () => d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
+	yScale = () => d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);	
 
-init();
-animate();
 
+
+
+init()
+animate()
 
 
 
@@ -145,12 +146,26 @@ function loadProjections(){
 function loadLookUp(){
 	d3.json('data/projections/lookUp.json').then(function(d){
 		z_d = d
+	})	
+}
+
+//finds distance conversion based on redshift value in lookup array
+//z: redshift
+//d: distance in Mpc
+function lookUp(redshift){
+	let found = z_d.find(function(element){
+		return element["z"] === redshift
 	})
+	if(found){
+		return found["d"]
+	}
+	else{
+		return cosmcalc(redshift)
+	}
 }
 
 //calculates distance in Mpc from redshift
 //deprecated with lookUp table
-/* 
 function cosmcalc(redshift){ //takes in redshift
 	
 	let z = redshift
@@ -266,7 +281,6 @@ function cosmcalc(redshift){ //takes in redshift
 	V_Gpc = 4.*Math.pi*((0.001*c/H0)**3)*VCM
 	return(DA_Mpc)
 }
-*/
 
 //rounding function to 3 decimal places
 function roundtothree(s, round = true) {
@@ -312,7 +326,7 @@ function loadSkewerData(callback) {
 
 			// individual reads of each element
 			spectra.forEach( (el) => {
-				let path = 'data/spectra_' + el + '_partial_norm/'
+				let path = 'data/spectra_' + el + '_norm/'
 				d3.dsv(' ', path + file, (d) => {
 					return {
 						'flux_norm': parseFloat(d.flux_norm),
@@ -570,7 +584,8 @@ function onMouseMove( event ) {
 
 		// greedy fuzzy select?
 		// adjust this when changing scale of the galaxies
-		if (p.object.type == "Points" && p.distanceToRay < 0.00009) {
+		//if (p.object.type == "Points" && p.distanceToRay < 0.00009) {
+		if (p.object.type == "Points" && p.distanceToRay < 1) {
 			pointOverIdx = p.index;
 			break;
 		}
@@ -1121,7 +1136,7 @@ function sphericalToCartesian(RA,DEC,redshift) {
 	//takes in phi (RA) and theta (DEC) in degrees
 	var theta = RA * (Math.PI/180)
 	var phi = DEC * (Math.PI/180)
-	var r = redshift
+	let r = lookUp(parseFloat(redshift))
 	var sph_pos = new THREE.Spherical(r,phi,theta)
 		//Spherical( radius : Float, phi POLAR : Float, theta EQUATOR : Float )
 		//PHI AND THETA ARE SWAPPED (physics vs math notation)
@@ -1321,7 +1336,7 @@ function plotSkewer(name, RA, DEC){
 
 		// TODO: fix level of detail, which is overagressive
 		let sprite = new THREE.TextSprite({
-			textSize: 0.000125,
+			textSize: 1,
 			redrawInterval: 250,
 			texture: {
 				text: name,
@@ -1348,8 +1363,8 @@ function init() {
 
 
 	camera = new THREE.PerspectiveCamera(
-		28 /* fov */, (2*window.innerWidth/3) / (window.innerHeight - 200) /* aspect */,
-		0.001 /* near */, 1 /* far */ );
+		50 /* fov */, (2*window.innerWidth/3) / (window.innerHeight - 200) /* aspect */,
+		0.01 /* near */, 10000 /* far */ );
 	controls = new THREE.OrbitControls( camera, renderer.domElement );
 	camera.maxDistance = Infinity;
 
@@ -1361,13 +1376,15 @@ function init() {
 	scene.add( cylinderGroup );
 	scene.add( cylinderBackGroup );
 	scene.add( textGroup );
-
-	processOptions(() => { // need parameters to load first
-		loadGalaxyData( () =>
-			loadSkewerData( computeProjections )); // need skewer and galaxy data before taking projections
-			//loadSkewerData( loadProjections )); // need skewer and galaxy data before taking projections
-		displayGui();
+	processOptions(() => {
+		// need parameters to load first
+			loadGalaxyData( () =>
+				loadSkewerData( computeProjections )); // need skewer and galaxy data before taking projections
+				//loadSkewerData( loadProjections )); // need skewer and galaxy data before taking projections
+			displayGui();
 	});
+	
+	
 
 	var container = document.getElementById( 'container' );
 	container.appendChild( renderer.domElement );
