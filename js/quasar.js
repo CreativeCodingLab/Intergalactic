@@ -2,6 +2,22 @@
 //In coordination with the CreativeCodingLab and the Astrophysics department at UCSC
 //Jasmine Otto, David Abramov, Joe Burchett (Astrophysics), Angus Forbes
 
+
+/*
+questions for Joe
+	What do the galaxy colors mean? (red vs blue)
+	What are the units of rvir?
+	What is significant about observing near-redshift galaxies?
+	Could you imagine expanding the redshift range of galaxies that are included in this visualization?
+	How could this tool be generalized for other cosmological datasets (far redshift? CGM?)
+	What is it about dark matter that this can help us understand?
+	If you could pick one or two more features to be added in the next two-three weeks, what would they be?
+		- EW vs Galaxy Dist
+		- Galaxy histogram?
+	Would being able to query the data (ex: galaxies by stellar mass) be useful, or is this easy enough to accomplish using other databases?
+*/
+var z_d = loadLookUp()
+
 // instantiate once
 var renderer, scene, camera, controls;
 var gui, guiParams;
@@ -34,7 +50,7 @@ var skewerLinearFiltering = false;
 
 // internal mutables - pass as arguments, avoid direct use.
 var filterDistantGalaxies = false;
-var distanceFromSkewer = 0.5; // Determines a distance for toggling on and off galaxies near Skewers
+var distanceFromSkewer = 1.5; // Determines a distance for toggling on and off galaxies near Skewers
 
 var raycaster = new THREE.Raycaster();
 var mouse = new THREE.Vector2();
@@ -77,7 +93,9 @@ var cyl_0;
 
 //initialize projection matrix (galaxies -> skewer distances)
 var projections = [];
-var z_d = loadLookUp()
+var quasar_galaxy_neighbors = [];
+var allLoaded = false;
+
 
 
 //used to generate redshift lookup table, now called from file in loadLookUp() function
@@ -92,26 +110,31 @@ z_r.forEach(function(d){
 	z_d.push(z)
 })*/
 
-//finds distance conversion based on redshift value in lookup array
-//z: redshift
-//d: distance in Mpc
-function lookUp(redshift){
-	var found = z_d.find(function(element){
-		return element["z"] === redshift
-	})
-	return found["d"]
-}
 
 let xScale = () => d3.scaleLinear().domain(depthDomain).range([0, columnWidth - 50]),
-	yScale = () => d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);
+	yScale = () => d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);	
 
-init();
-animate();
 
+
+
+init()
+animate()
 
 
 
 function loadGalaxyData(callback) {
+	//loadProjections()
+	
+	d3.json('data/galaxies.json').then(function(d){
+		galaxies = d
+		processGalaxyData(galaxies);
+		//galaxies = data; // TODO: as new Map()
+		callback();
+	//}).then((data) => {
+		
+	});
+}
+/*
 	d3.dsv(" ", galaxyFile, (d) => {
 		return {
 			'NSAID': d.NSAID,
@@ -127,30 +150,54 @@ function loadGalaxyData(callback) {
 			'position': sphericalToCartesian(d.RA,d.DEC,d.redshift)
 		}
 	}).then((data) => {
+		console.log(data)
 		processGalaxyData(data);
 		galaxies = data; // TODO: as new Map()
 		callback();
 	});
-}
+}*/
 
 //deprecated with redshift/distance lookup array
-/*
+
 function loadProjections(){
 	d3.json(projectionData).then(function(d){
 		projections = d
 	})
-}*/
+}
+
+function loadP(idxP){
+	if(idxP != -1){
+		d3.json('data/projections/p' + idxP + '.json').then(function(d){
+			projections[idxP] = d
+			plotSkewerNeighbors()
+		})
+	}	
+}
 
 //loads the lookUp file containing redshift -> distance
 function loadLookUp(){
 	d3.json('data/projections/lookUp.json').then(function(d){
 		z_d = d
+	})	
+}
+
+//finds distance conversion based on redshift value in lookup array
+//z: redshift
+//d: distance in Mpc
+function lookUp(redshift){
+	let found = z_d.find(function(element){
+		return element["z"] === redshift
 	})
+	if(found){
+		return found["d"]
+	}
+	else{
+		return cosmcalc(redshift)
+	}
 }
 
 //calculates distance in Mpc from redshift
 //deprecated with lookUp table
-/* 
 function cosmcalc(redshift){ //takes in redshift
 	
 	let z = redshift
@@ -266,7 +313,6 @@ function cosmcalc(redshift){ //takes in redshift
 	V_Gpc = 4.*Math.pi*((0.001*c/H0)**3)*VCM
 	return(DA_Mpc)
 }
-*/
 
 //rounding function to 3 decimal places
 function roundtothree(s, round = true) {
@@ -312,7 +358,7 @@ function loadSkewerData(callback) {
 
 			// individual reads of each element
 			spectra.forEach( (el) => {
-				let path = 'data/spectra_' + el + '_partial_norm/'
+				let path = 'data/spectra_' + el + '_norm/'
 				d3.dsv(' ', path + file, (d) => {
 					return {
 						'flux_norm': parseFloat(d.flux_norm),
@@ -343,7 +389,8 @@ let computeProjections = () => {
 		let ret = galaxies.map( v => {
 			//v = galaxy, u = skewer
 			distance = haversine(u.DEC,v.DEC,u.RA,v.RA,v.redshift)
-			return [v.NSAID,k,distance]
+			//return [v.NSAID,k,distance]
+			return [distance]
 		})
 		projections.push(ret)
 	})
@@ -359,7 +406,7 @@ function haversine(dec1, dec2, ra1, ra2, redshift){
 	let a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) * Math.sin(dLon/2)
 	let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 	let distance = c * z
-	return distance
+	return roundtothree(distance)
 }
 
 //able to export an array to .json file for faster retrieval
@@ -371,16 +418,39 @@ function exportData(name, text) {
 	a.click();
 }
 
+function getQuasarGalaxyNeighbors(){
+	let i = prevCylOverIdx;
+	let n = graphs.length;
+	for(w=0;w<n;w++){
+		if(i[w] != -1){
+			let k = skewer[i[w]], //v = skewerData.get(k),
+				p = projections[i[w]]; // load cache of this skewer
+			quasar_galaxy_neighbors[w] = []
+			quasar_galaxy_neighbors[w].push(skewerData.get(k))
+			if(p){
+				for (let j = 0; j < galaxies.length; ++j) {						
+					let dist = p[j] // .distanceTo(galaxies[j].position)
+					let u = galaxies[j];
+					if (dist < distanceFromSkewer) { // filter, then map
+						quasar_galaxy_neighbors[w].push(u)
+					}
+				}
+			}
+		}
+	}
+}
+
 // EVENT HANDLERS
 function onKeyDown(event) {
 
 	var keyChar = String.fromCharCode(event.keyCode);
 	
 	//export an array to json file
-	/*
 	if( keyChar == 'D') {
-		exportData('lookUp.json',JSON.stringify(z_d)) //currently set to save the lookUp table
-	}*/
+		//exportData('galaxies.json',JSON.stringify(galaxies))
+		getQuasarGalaxyNeighbors()
+		exportData('quasar_galaxy_neighbors.json',JSON.stringify(quasar_galaxy_neighbors))
+	}
 	
 	
 	//store selected galaxy on bottom panel
@@ -398,7 +468,7 @@ function onKeyDown(event) {
 	//toggles galaxies near skewers
 	//same functionality as double clicking on slider circle
 	else if ( keyChar == 'N') {
-	    toggleGalaxiesNearSkewers(); // skewers, distanceFromSkewer
+		loadAllP(toggleGalaxiesNearSkewers); // skewers, distanceFromSkewer
 	}
 	
 	//toggle skewer visibility in 3D view
@@ -570,7 +640,8 @@ function onMouseMove( event ) {
 
 		// greedy fuzzy select?
 		// adjust this when changing scale of the galaxies
-		if (p.object.type == "Points" && p.distanceToRay < 0.00009) {
+		//if (p.object.type == "Points" && p.distanceToRay < 0.00009) {
+		if (p.object.type == "Points" && p.distanceToRay < 0.4) {
 			pointOverIdx = p.index;
 			break;
 		}
@@ -646,8 +717,12 @@ function createGraph(n_skewers) {
 
 function plotSkewerSpectra() {
 	i = prevCylOverIdx;
+	
 	let n = graphs.length;
 	for(w=0;w<n;w++){
+		if(!projections[i[w]]){
+			loadP(i[w])
+		}
 		let graph = graphs[w];
 		let k = skewer[i[w]],
 			spectra = d3.entries(skewerData.get(k));
@@ -782,21 +857,24 @@ function plotSkewerNeighbors() {
 	for(w=0;w<n;w++){
 		let graph = graphs[w];
 		if(i[w] != -1){
-			let k = skewer[i[w]], v = skewerData.get(k),
-			 	p = projections[i[w]]; // load cache of this skewer
+			let k = skewer[i[w]], //v = skewerData.get(k),
+				 p = projections[i[w]]; // load cache of this skewer
+			//quasar_galaxy_neighbors[w] = []
+			//quasar_galaxy_neighbors[w].push(skewerData.get(k))
 			graph.selectAll('.mark').remove()
 			
 			if(p){
 				for (let j = 0; j < galaxies.length; ++j) {
-				let dist = p[j][2] // .distanceTo(galaxies[j].position)
+				//let dist = p[j][2] // .distanceTo(galaxies[j].position)
 				
+				let dist = p[j] // .distanceTo(galaxies[j].position)
 				let u = galaxies[j];
 				// TODO: clean up this list by storing values in an array. Such as A[0] = 'dist' ...
 				
 				//if (dist < distanceFromSkewer / boxRadius && u.redshift < depthDomain[1] && u.redshift > depthDomain[0]) { // filter, then map
 				if (dist < distanceFromSkewer) { // filter, then map
 					let distAlong = u.redshift
-
+					//quasar_galaxy_neighbors[w].push(galaxies[j])
 					if(boxWidth == 'dist'){
 						halfWidth = 10/(dist)
 					}
@@ -908,7 +986,8 @@ function plotGalaxyImage(idx){
 	
 		var galaxyImage = svg.append('div')
 		galaxyImage.append('img')
-			.attr('src', 'data/galaxyImages_partial/' + g.NSAID + '.jpg')
+			//.attr('src', 'data/galaxyImages_partial/' + g.NSAID + '.jpg')
+			.attr('src', 'data/galaxyImages/' + g.NSAID + '.jpg')
 			.attr('width', '200px')
 	}
 	else{
@@ -919,7 +998,7 @@ function plotGalaxyImage(idx){
 			.attr('id','galaxyImage' + g.NSAID)
 			.attr('class','galaxyQueue')
 		svg.append('img')
-			.attr('src', 'data/galaxyImages_partial/' + g.NSAID + '.jpg')
+			.attr('src', 'data/galaxyImages/' + g.NSAID + '.jpg')
 			.attr('height', '200px')
 		txt.selectAll('p')
 			.data(lines)
@@ -998,7 +1077,7 @@ function createSlider(init = distanceFromSkewer) {
 		.style('stroke-width', 2.5)
 		.call(drag)
 		.on('dblclick', () => {
-			toggleGalaxiesNearSkewers()
+			loadAllP(toggleGalaxiesNearSkewers)
 			svg.select('.slider-handle')
 				.style('fill', () => filterDistantGalaxies ? 'black' : 'white')
 		})
@@ -1121,7 +1200,7 @@ function sphericalToCartesian(RA,DEC,redshift) {
 	//takes in phi (RA) and theta (DEC) in degrees
 	var theta = RA * (Math.PI/180)
 	var phi = DEC * (Math.PI/180)
-	var r = redshift
+	let r = lookUp(parseFloat(redshift))
 	var sph_pos = new THREE.Spherical(r,phi,theta)
 		//Spherical( radius : Float, phi POLAR : Float, theta EQUATOR : Float )
 		//PHI AND THETA ARE SWAPPED (physics vs math notation)
@@ -1149,7 +1228,8 @@ function processGalaxyData(data) {
 
 		let u = data[i];
 
-		var vertex = data[i].position.clone()
+		var vertex = new THREE.Vector3(data[i].position.x,data[i].position.y,data[i].position.z)//.clone()
+		//var vertex = data[i].position.clone()
 		vertex.toArray( positions, i * 3 );
 
 		colors[i] = u.color == "red" ? 0 :
@@ -1218,12 +1298,24 @@ function processGalaxyData(data) {
 function filterGalaxiesNearSkewers() {
 	//turn off all stars, then go through the selected skewers and turn on ones that < maxDistance from it
 
-	for (var g = 0; g < galaxies.length; g++)
+	for (let j = 0; j < galaxies.length; ++j) {		
+		boxOfPoints.geometry.attributes.isVisible.array[ j ] = 0.0;				
+		let dist = projections[j]
+		if (dist < distanceFromSkewer) { // filter, then map
+			boxOfPoints.geometry.attributes.isVisible.array[ j ] = 1.0;
+		}
+		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
+	}
+}
+
+
+
+	/*for (var g = 0; g < galaxies.length; g++)
 		boxOfPoints.geometry.attributes.isVisible.array[ g ] = 0.0;
 
 	for (var s = 0; s < skewer.length; s++) {
 		let mask = projections[s]
-					.map(v => v[2] // .distanceTo(galaxies[i].position)
+					.map(v => v//v[2] // .distanceTo(galaxies[i].position)
 									<= distanceFromSkewer ? 1 : 0);
 									//<= distanceFromSkewer / boxRadius ? 1 : 0);
 					// TODO: refactor
@@ -1231,20 +1323,32 @@ function filterGalaxiesNearSkewers() {
 			if (mask[g])
 				boxOfPoints.geometry.attributes.isVisible.array[ g ] = 1.0;
 		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
-	}
+	}*/
 
-}
 function unfilterGalaxiesNearSkewers() {
 	for (var g = 0; g < galaxies.length; g++)
 		boxOfPoints.geometry.attributes.isVisible.array[ g ] = 1.0;
 	boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
 }
+
+function loadAllP(callback){
+	if(!allLoaded){
+		allLoaded = true;
+		for(n=0;n<skewer.length;n++){
+			loadP(n)
+		}
+	}
+	allLoaded = true;
+	callback();
+}
+
 function toggleGalaxiesNearSkewers() {
+	
 	filterDistantGalaxies = !filterDistantGalaxies
-	if (filterDistantGalaxies)
-		filterGalaxiesNearSkewers()
-	else
-		unfilterGalaxiesNearSkewers()
+		if (filterDistantGalaxies)
+			filterGalaxiesNearSkewers()
+		else
+			unfilterGalaxiesNearSkewers()
 }
 
 
@@ -1321,7 +1425,7 @@ function plotSkewer(name, RA, DEC){
 
 		// TODO: fix level of detail, which is overagressive
 		let sprite = new THREE.TextSprite({
-			textSize: 0.000125,
+			textSize: 1,
 			redrawInterval: 250,
 			texture: {
 				text: name,
@@ -1348,8 +1452,8 @@ function init() {
 
 
 	camera = new THREE.PerspectiveCamera(
-		28 /* fov */, (2*window.innerWidth/3) / (window.innerHeight - 200) /* aspect */,
-		0.001 /* near */, 1 /* far */ );
+		50 /* fov */, (2*window.innerWidth/3) / (window.innerHeight - 200) /* aspect */,
+		0.01 /* near */, 10000 /* far */ );
 	controls = new THREE.OrbitControls( camera, renderer.domElement );
 	camera.maxDistance = Infinity;
 
@@ -1361,13 +1465,17 @@ function init() {
 	scene.add( cylinderGroup );
 	scene.add( cylinderBackGroup );
 	scene.add( textGroup );
-
-	processOptions(() => { // need parameters to load first
-		loadGalaxyData( () =>
-			loadSkewerData( computeProjections )); // need skewer and galaxy data before taking projections
-			//loadSkewerData( loadProjections )); // need skewer and galaxy data before taking projections
-		displayGui();
+	processOptions(() => {
+		// need parameters to load first
+			loadGalaxyData( () =>
+				//loadSkewerData( computeProjections )); // need skewer and galaxy data before taking projections
+				loadSkewerData()); // need skewer and galaxy data before taking projections
+			displayGui();
+		
+			
 	});
+	
+	
 
 	var container = document.getElementById( 'container' );
 	container.appendChild( renderer.domElement );
@@ -1375,6 +1483,7 @@ function init() {
 	window.addEventListener( 'resize', onWindowResize, false );
 	window.addEventListener( 'mousemove', onMouseMove, false );
 	document.addEventListener("keydown", onKeyDown, false);
+	
 }
 
 //Creates a gui using the dat.gui library
