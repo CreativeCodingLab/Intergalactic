@@ -77,7 +77,7 @@ for(i=0;i<n_skewers;i++){ //initializes selected skewer idx
 let graphs = createGraph(n_skewers);
 
 //initializes skewer neighbor box sizes
-var boxHeight = 'rvir';
+var boxHeight = 'dist';
 var boxWidth = 2;
 var halfWidth = boxWidth;
 var halfSize = 10;
@@ -1297,7 +1297,6 @@ function processGalaxyData(data) {
 
 function filterGalaxiesNearSkewers() {
 	//turn off all stars, then go through the selected skewers and turn on ones that < maxDistance from it
-
 	for (let j = 0; j < galaxies.length; ++j) {		
 		boxOfPoints.geometry.attributes.isVisible.array[ j ] = 0.0;				
 		let dist = projections[j]
