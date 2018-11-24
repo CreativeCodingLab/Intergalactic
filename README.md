@@ -20,7 +20,7 @@ If you find interesting galaxy/absorber pairs, use the numeric keys and 'G' to k
 
 ### `>> ` [Click here to run!](https://creativecodinglab.github.io/Intergalactic/intergalactic.html) `<<`
 
-# Keystrokes Quick Reference<br/>
+## Keystrokes Quick Reference<br/>
 arrow keys: move reference point<br/>
 0 - 9 : store selected skewer<br/>
 G : store selected galaxy<br/>
