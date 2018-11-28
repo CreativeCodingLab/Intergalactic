@@ -483,12 +483,14 @@ function onKeyDown(event) {
 	}	
 
 	//on numerical key press, stores selected skewer to that graph
-	else if ( keyChar == '1') {
+	if ( keyChar == '1') {
 		if(prevCylOverIdx[1] == -1){
 			prevCylOverIdx[1] = prevCylOverIdx[0];
+			selectSkewer();
 		}
 		else{
 			prevCylOverIdx[1] = -1
+			unselectSkewer();
 		}
 		plotSkewerSpectra();
 	}
@@ -498,6 +500,7 @@ function onKeyDown(event) {
 		}
 		else{
 			prevCylOverIdx[2] = -1
+			unselectSkewer();
 		}
 		plotSkewerSpectra();
 	}
@@ -507,6 +510,7 @@ function onKeyDown(event) {
 		}
 		else{
 			prevCylOverIdx[3] = -1
+			unselectSkewer();
 		}
 		plotSkewerSpectra();	}
 	else if ( keyChar == '4') {
@@ -515,6 +519,7 @@ function onKeyDown(event) {
 		}
 		else{
 			prevCylOverIdx[4] = -1
+			unselectSkewer();
 		}
 		plotSkewerSpectra();	
 	}		
@@ -524,6 +529,7 @@ function onKeyDown(event) {
 		}
 		else{
 			prevCylOverIdx[5] = -1
+			unselectSkewer();
 		}
 		plotSkewerSpectra();	
 	}
@@ -533,6 +539,7 @@ function onKeyDown(event) {
 		}
 		else{
 			prevCylOverIdx[6] = -1
+			unselectSkewer();
 		}
 		plotSkewerSpectra();	
 	}
@@ -542,6 +549,7 @@ function onKeyDown(event) {
 		}
 		else{
 			prevCylOverIdx[7] = -1
+			unselectSkewer();
 		}
 		plotSkewerSpectra();	
 	}
@@ -551,6 +559,7 @@ function onKeyDown(event) {
 		}
 		else{
 			prevCylOverIdx[8] = -1
+			unselectSkewer();
 		}
 		plotSkewerSpectra();	
 	}
@@ -560,6 +569,7 @@ function onKeyDown(event) {
 		}
 		else{
 			prevCylOverIdx[9] = -1
+			unselectSkewer();
 		}
 		plotSkewerSpectra();	
 	}
@@ -595,21 +605,18 @@ function unselectPoint() {
 
 // WIP - pass bool attribute to fragment shader of each cylinder?
 function selectSkewer() {
-	for(i=0;i<prevCylOverIdx.length;i++){
-		if(cyl[i]){
-			cyl[i] = cylinderGroup.children[prevCylOverIdx[i]]
-			cyl[i].geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
-			cyl[i].geometry.attributes.isSelected.needsUpdate = true;
-		}
-	}
 	cyl_0 = cylinderGroup.children[cylOverIdx]
 	cyl_0.geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
 	cyl_0.geometry.attributes.isSelected.needsUpdate = true;
-	
+	for(i=1;i<prevCylOverIdx.length;i++){
+		cyl[i] = cylinderGroup.children[prevCylOverIdx[i]]
+		cyl[i].geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
+		cyl[i].geometry.attributes.isSelected.needsUpdate = true;
+	}	
 }
 function unselectSkewer() {
-	for(i=0;i<prevCylOverIdx.length;i++){
-		if (cyl[i]) {
+	for(i=1;i<prevCylOverIdx.length;i++){
+		if (cyl[i] && prevCylOverIdx[i] == -1) {
 			cyl[i].geometry.attributes.isSelected.set(Array(192).fill(0.0))
 			cyl[i].geometry.attributes.isSelected.needsUpdate = true;
 		}
@@ -631,53 +638,55 @@ function onMouseMove( event ) {
 
 	raycaster.setFromCamera( mouse, camera );
 
-	// calculate objects intersecting the picking ray
-	var intersects = raycaster.intersectObjects( scene.children );
-	pointOverIdx = -1;
+	if(mouse.y>-1){
+		// calculate objects intersecting the picking ray
+		var intersects = raycaster.intersectObjects( scene.children );
+		pointOverIdx = -1;
 
-	for ( var i = 0; i < intersects.length; i++ ) {
-		var p = intersects[ i ];
+		for ( var i = 0; i < intersects.length; i++ ) {
+			var p = intersects[ i ];
 
-		// greedy fuzzy select?
-		// adjust this when changing scale of the galaxies
-		//if (p.object.type == "Points" && p.distanceToRay < 0.00009) {
-		if (p.object.type == "Points" && p.distanceToRay < 0.4) {
-			pointOverIdx = p.index;
-			break;
+			// greedy fuzzy select?
+			// adjust this when changing scale of the galaxies
+			//if (p.object.type == "Points" && p.distanceToRay < 0.00009) {
+			if (p.object.type == "Points" && p.distanceToRay < 0.4) {
+				pointOverIdx = p.index;
+				break;
+			}
 		}
-	}
 
-	if (pointOverIdx >= 0 && pointOverIdx != prevPointOverIdx) {
-		// mouse is over new point; show galaxy details
-		selectPoint();
-		plotSkewerSpectra();
-		plotGalaxyImage(pointOverIdx); // fire once for each new hover
-	}
-	if (pointOverIdx < 0 && prevPointOverIdx >= 0) {
-		// mouse isn't over a point anymore
-		unselectPoint();
-	}
-
-	//intersect with skewers
-	intersects = raycaster.intersectObjects( cylinderGroup.children );
-	//checks to see if there is a skewer selected, which updates the first graph
-	if (cylOverIdx != -1){
-		prevCylOverIdx[0]=cylOverIdx
-		plotSkewerSpectra()
-	}
-	cylOverIdx = -1;
-	
-	for ( var i = 0; i < intersects.length; i++ ) {
-		var p = intersects[ i ];
-		if ( cylinderGroup.visible == true && p.object.type == "Mesh") {
-			cylOverIdx = cylinderGroup.children.indexOf(p.object) // recompute index to recover model object
+		if (pointOverIdx >= 0 && pointOverIdx != prevPointOverIdx) {
+			// mouse is over new point; show galaxy details
+			selectPoint();
+			plotSkewerSpectra();
+			plotGalaxyImage(pointOverIdx); // fire once for each new hover
 		}
-	}
+		if (pointOverIdx < 0 && prevPointOverIdx >= 0) {
+			// mouse isn't over a point anymore
+			unselectPoint();
+		}
 
-	if (cylOverIdx > -1 && !prevCylOverIdx.includes(cylOverIdx)) {
-		unselectSkewer()
-		selectSkewer()
-		plotSkewerSpectra();
+		//intersect with skewers
+		intersects = raycaster.intersectObjects( cylinderGroup.children );
+		//checks to see if there is a skewer selected, which updates the first graph
+		if (cylOverIdx != -1){
+			prevCylOverIdx[0]=cylOverIdx
+			plotSkewerSpectra()
+		}
+		cylOverIdx = -1;
+		
+		for ( var i = 0; i < intersects.length; i++ ) {
+			var p = intersects[ i ];
+			if ( cylinderGroup.visible == true && p.object.type == "Mesh") {
+				cylOverIdx = cylinderGroup.children.indexOf(p.object) // recompute index to recover model object
+			}
+		}
+
+		if (cylOverIdx > -1 && !prevCylOverIdx.includes(cylOverIdx)) {
+			unselectSkewer()
+			selectSkewer()
+			plotSkewerSpectra();
+		}
 	}
 }
 
@@ -707,7 +716,6 @@ function createGraph(n_skewers) {
 				.text('Press ' + (i) + ' to save selected skewer')
 		}
 		graphs[i] = ret;
-
 	}
 	createBrush()
 	createSlider()
@@ -955,7 +963,7 @@ function plotSkewerNeighbors() {
 }
 
 function plotGalaxyImage(idx){
-
+	let j = idx
 	var g = galaxies[idx]
 	currentGalaxy = [g,idx];
 	let f = roundtothree
@@ -989,6 +997,14 @@ function plotGalaxyImage(idx){
 			//.attr('src', 'data/galaxyImages_partial/' + g.NSAID + '.jpg')
 			.attr('src', 'data/galaxyImages/' + g.NSAID + '.jpg')
 			.attr('width', '200px')
+			.on('mouseover', (j) => {			
+				pointOverIdx = idx //;
+				selectPoint()
+			})
+			.on('mouseout', (j) =>{
+				prevPointOverIdx = idx
+				unselectPoint()
+			})
 	}
 	else{
 		var txt = d3.select('#selectedGalaxies').append('div')
@@ -1000,18 +1016,35 @@ function plotGalaxyImage(idx){
 		svg.append('img')
 			.attr('src', 'data/galaxyImages/' + g.NSAID + '.jpg')
 			.attr('height', '200px')
+			.on('mouseover', (j) => {
+				pointOverIdx = j //;
+				selectPoint()
+			})
+			.on('mouseout', (j) =>{
+				prevPointOverIdx = j
+				unselectPoint()
+			})
 		txt.selectAll('p')
 			.data(lines)
 			.enter()
 			.append('p')
 			.style('width','150px')
 			.text(d => d)
+		svg.selectAll('img')
+			.on('mouseover', (j) => {
+				pointOverIdx = idx //;
+				selectPoint()
+			})
+			.on('mouseout', (j) =>{
+				prevPointOverIdx = idx
+				unselectPoint()
+			})
 		$( "div#selectedGalaxies" ).scrollLeft( 0 );
 		
 	}
-	d3.selectAll('.galaxyQueue')
+	/*d3.selectAll('.galaxyQueue')
 		.on('mouseover', (p) => {
-			pointOverIdx = p
+			pointOverIdx = idx
 			selectPoint()
 			d3.selectAll('.g'+idx)
 				.style('fill','red')
@@ -1022,7 +1055,7 @@ function plotGalaxyImage(idx){
 			cs[idx] = 1.0;
 			prevPointOverIdx = idx;
 			boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
-		})
+		})*/
 }
 
 function createSlider(init = distanceFromSkewer) {
@@ -1245,7 +1278,6 @@ function processGalaxyData(data) {
 	geometry.addAttribute( 'customColor', new THREE.BufferAttribute( colors, 1 ) );
 	geometry.addAttribute( 'isSelected', new THREE.BufferAttribute( selects, 1 ) );
 	geometry.addAttribute( 'isVisible', new THREE.BufferAttribute( visibles, 1 ) );
-
 	geometry.addAttribute( 'size', new THREE.BufferAttribute( sizes, 1 ) );
 
 	var material = new THREE.ShaderMaterial( {
@@ -1253,6 +1285,7 @@ function processGalaxyData(data) {
 		uniforms: {
 			amplitude: { value: 1.0 },
 			color:     { value: new THREE.Color( 0xffffff ) },
+			//color:     { value: new THREE.Color( 0xffffff ) },
 			redColor:  { value: new THREE.Color(galaxyRedHSL) },
 			blueColor: { value: new THREE.Color(galaxyBlueHSL) },
 			texture:   { value: tex1 },
@@ -1417,14 +1450,12 @@ function plotSkewer(name, RA, DEC){
 	cylinderGroup.add(cyl);
 	cylinderBackGroup.add( cyl2 ); // do not also add to cylinderGroup - won't be aligned with skewers data.
 	// console.log(cyl, cyl2);
-
-
 	if (showLabels) {
 		//Label  (x,y) = (-0.166381,0.062923) as ‘Coma cluster’ //z position??
 
 		// TODO: fix level of detail, which is overagressive
 		let sprite = new THREE.TextSprite({
-			textSize: 1,
+			textSize: 0.5,
 			redrawInterval: 250,
 			texture: {
 				text: name,
@@ -1441,14 +1472,13 @@ function plotSkewer(name, RA, DEC){
 		sprite.position.setX(startPoint.x).setY(startPoint.y).setZ(startPoint.z);
 		textGroup.add(sprite);
 	}
-
 }
 
 function init() {
 	renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( window.innerWidth - columnWidth, window.innerHeight - 200 );
-
+	renderer.setClearColor (0x333333, 0.1);
 
 	camera = new THREE.PerspectiveCamera(
 		50 /* fov */, (2*window.innerWidth/3) / (window.innerHeight - 200) /* aspect */,
@@ -1673,7 +1703,12 @@ function createAbsorptionDataTexture(name) {
 			var ar = absorptionData[i] - 1;
 			//var lerpVal = (ar + 1.0) * 0.5; //scale from -1->+1 to 0->1
 
+			//var ar = absorptionData[i];
 			var lerpVal;
+
+			//colorVal.setHSL(minHSL.h, minHSL.s, 0.2);
+
+			
 			if (ar < 0.0) {
 				lerpVal = (ar * -1.0);
 				colorVal.setHSL(minHSL.h, minHSL.s, lerpVal + 0.2); //   = colorMin.clone().lerp(black, lerpVal);
