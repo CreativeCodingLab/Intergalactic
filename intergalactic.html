@@ -231,6 +231,7 @@
 		
 
 		<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+		<script src="libs/math.min.js"></script>
 		<script src="libs/three.js"></script>
 		<script src="libs/OrbitControls.js"></script>
 		<script src="libs/THREE.TextTexture.js"></script>
@@ -373,7 +374,7 @@
 				}
 				if (vSelect > 0.9 && vSelect < 1.1){
 					//gl_FragColor *= 1.5;
-					gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+					gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
 				}
 			}
 
