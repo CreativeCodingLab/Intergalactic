@@ -16,28 +16,37 @@
 				overflow: hidden;
 			}
 			#dat-gui {
-				float: left;
+				top:1px;
+				font-family:Verdana;
+				font-size:13px;
+				margin-top: 2px;
+				margin-right: 34vw;
+				background: #00000000;
 			}
 			#details {
 				/*background-color: #343d46;
 				background-color: #161616;*/
-				background-color: #1f1f1f;
-				width: 33%;
+				background-color: #1d1d1d;
+				width: 33.3%;
 				height: 100%;
 				float: right;
-				top: 3px;
+				top: 20px;
 				display: block;
 				position: fixed;
 				top: 0;
 				right: 0;
+				border-style: solid;
+				border-width: 1px 1px 1px 1px;
+				border-color: #868686;
 			}
 
 			#container{
-				width: 67%;
+				width: 66.6%;
 				height: 100% - 200px;
 				left: 0px;
 				margin: 0px;
 				bottom: 200px;
+				border-width: 1px 1px 1px 1px;
 			}
 			#info {
 				color: #fff;
@@ -48,14 +57,17 @@
 			}
 
 			#bottom-panel {
-				background-color: #484848;
+				background-color: #1d1d1d;
 				height: 202px;
-				width: 67%;
+				width: 66.6%;
 				left: 0;
 				bottom: 0;
 				position: absolute;
 				display: block;
 				float: left;
+				border-style: solid;
+				border-width: 1px 0px 1px 1px;
+				border-color: #868686;
 			}
 
 			#galaxyImage{
@@ -79,6 +91,7 @@
 				font-size: 13px;
 				text-align: left;
 				line-height: 4px;
+				
 			}
 
 			#selectedGalaxies {
@@ -89,15 +102,22 @@
 				bottom: 0px;
 				overflow-x: scroll;
 				left: 395px;
-				right: 33%;
+				right: 33.3%;
 				height: 202px;
 				/*bottom: -1px;*/
 				padding-left: 1px;
+				border-style: solid;
+				border-width: 1px 1px 1px 1px;
+				border-color: #868686;
 			}
 
 			.tick text{
 				fill:white;
 				font-family:Verdana;
+			}
+
+			.tick{
+				fill:white;
 			}
 
 			#depth-brush text{
@@ -122,7 +142,7 @@
 			}
 
 			#border {
-				stroke: #1f1f1f;
+				stroke: #1d1d1d;
 				stroke-width: 40;
 				fill: none;
 				height: 250px;
@@ -130,6 +150,10 @@
 			#graphs {
 				overflow-y: scroll;
 				height: 80vh;
+				border-style: solid;
+				border-width: 1px 1px 1px 1px;
+				border-color: #868686;
+				
 			}
 			.graph-background {
 				fill: #868686;
@@ -141,7 +165,7 @@
 			}
 			.galaxyQueue{
 				border-style: solid;
-				border-width: 0px 1px 0px 1px;
+				border-width: 0px 1px 0px 0px;
 				border-color: #868686;
 				
 			}
@@ -192,6 +216,17 @@
 				height: 40px;
 				background: rgb(199, 199, 199);
 				box-shadow: 0 3px 0 rgba(0,0,0,.05);
+			}
+
+			#imageSaveInstructions{
+				transform: translate(10vw,75px);
+			
+
+			}
+
+			.dg ac{
+				bottom: 0px;
+				right: 0px;
 			}
 
 		

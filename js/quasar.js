@@ -11,6 +11,7 @@
 
 var z_d = loadLookUp()
 var EW_coord = []; //redshift + flux
+var EW_all = []
 var z_left,z_right,z_abs, EW_selected, E_pressed;
 var ferr = [];
 var reds = [];
@@ -526,17 +527,23 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 	//console.log(vel)
 	
 	//let velidx=np.where((vel>=vellim[0])&(vel<=vellim[1]))[0] //use find
-
-	var found = vel.find(function(element) {
+	let velidx = [];
+	for(i=0;i<vel.length;i++){
+		if(vel[i]>=vellim[0] && vel[i]<=vellim[1]){
+			velidx.push(i)
+		}
+	}
+	
+	/*var found = vel.find(function(element) {
 		return (element >= vellim[0] && element <=vellim[1]);
 	});
 	
 	//var found = vel.indexOf(element >= vellim[0] && element <=vellim[1]);
-	let velidx = vel.indexOf(found)
+	let velidx = vel.indexOf(found)*/
 	console.log("velidx: " + velidx)
-	let velup = vel[velidx+1]
+	let velup = vel[velidx[velidx.length - 1]]
 	console.log("velup: " +  velup)
-	let veldown = vel[velidx]
+	let veldown = vel[velidx[0]]
 	console.log("veldown: " +  veldown)
 	let dv = Math.abs(velup-veldown)
 	console.log("dv: " + dv)
@@ -564,20 +571,33 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 	effflux[belowerr] = ferr[belowerr]
 	console.log(effflux[belowerr])
 
-    //### Calculate EW and errors due to flux and continuum placement
-	let EWpix = dv * (1.-effflux[velidx]/cont[velidx])*restlam/c
+	//### Calculate EW and errors due to flux and continuum placement
+	//let EWpix = dv * (1.-effflux[velidx]/cont[velidx])*restlam/c
+	let EWpix = [];
+	let sigEWf = [];
+	let tauv = [];
+	let tauverr_f = [];
+	for(i=0;i<velidx.length;i++){
+		let l = dv*(1-effflux[velidx[i]]/cont[velidx[i]])*restlam/c
+		let m = dv / cont[velidx[i]] * ferr[velidx[i]] * restlam/c
+		let n = math.log(cont[velidx[0]]/(effflux[velidx[0]]))
+		let o = ferr[velidx[0]]/effflux[velidx[0]]
+		EWpix.push(l)
+		sigEWf.push(m)
+		tauv.push(n)
+		tauverr_f.push(o)
+	}
 	console.log("EWpix: " +  EWpix)
-    let sigEWf = dv / cont[velidx] * ferr[velidx] * restlam/c
 	console.log("sigEWf: " +  sigEWf)
-
-    //### Calculate optical depth and uncertainty due to flux and continuum
-    let tauv=math.log(cont[velidx]/(effflux[velidx]))
 	console.log("tauv: " + tauv)
-	let tauverr_f = ferr[velidx]/effflux[velidx]
-	console.log("tauverr_f: " + tauverr_f)
-	let Npix=1/(2.654e-15)/restlam/fosc*dv*tauv
+	console.log("tauverr_f" + tauverr_f)
+	
+	//let sigEWf = dv / cont[velidx[0]] * ferr[velidx[0]] * restlam/c
+    //### Calculate optical depth and uncertainty due to flux and continuum
+	
+	let Npix=math.multiply(1/(2.654e-15)/restlam/fosc*dv,tauv)
 	console.log("Npix: " + Npix)
-    let sigNf = 1./2.654e-15/restlam/fosc*dv*tauverr_f
+    let sigNf = math.multiply(1./2.654e-15/restlam/fosc*dv,tauverr_f)
 	console.log("sigNf:" + sigNf)
 	return [EWpix,sigEWf,Npix,sigNf]
 }
@@ -615,12 +635,20 @@ function EW_ACD(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=1215.67,
     let N = math.sum(Npix)
 	console.log("N: " + N)
 
+	let k = 0
+	for(i=0;i<sigEWf.length;i++){
+		k+=math.pow(sigEWf[i],2)
+	}
 	// Sum flux error contributions in quadrature
-    let sigEWf_tot = math.sqrt(math.sum(math.pow(sigEWf,2)))
+    let sigEWf_tot = math.sqrt(k)
 	console.log("sigEWf_tot: " + sigEWf_tot)
-	let sigNf_tot = math.sqrt(math.sum(math.pow(sigNf,2)))
+	k = 0
+	for(i=0;i<sigNf.length;i++){
+		k+=math.pow(sigNf[i],2)
+	}
+	let sigNf_tot = math.sqrt(k)
 	console.log("sigNf_tot: " + sigNf_tot)
-	return EW,sigEWf_tot,N,sigNf_tot
+	return [EW,sigEWf_tot,N,sigNf_tot]
 }
 
 function pressLeft(){
@@ -684,7 +712,9 @@ function getSkewerSpectra(){
 				ferr.push(0.01) //filler array
 			}*/
 			console.log(reds, waves, fluxes, ferr)
-			EW_ACD(waves,fluxes,ferr,z_abs,vellim=[-50,50],cont="None",restlam=1215.67,fosc=0.4164)
+			let EW_out = EW_ACD(waves,fluxes,ferr,z_abs,vellim=[-50,50],cont="None",restlam=1215.67,fosc=0.4164)
+			console.log(EW_out)
+			EW_all.push(EW_out)
 
 
 
@@ -881,9 +911,11 @@ function selectSkewer() {
 	cyl_0.geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
 	cyl_0.geometry.attributes.isSelected.needsUpdate = true;
 	for(i=1;i<prevCylOverIdx.length;i++){
-		cyl[i] = cylinderGroup.children[prevCylOverIdx[i]]
-		cyl[i].geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
-		cyl[i].geometry.attributes.isSelected.needsUpdate = true;
+		if(cyl[i] != -1){
+			cyl[i] = cylinderGroup.children[prevCylOverIdx[i]]
+			cyl[i].geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
+			cyl[i].geometry.attributes.isSelected.needsUpdate = true;
+		}
 	}
 }
 function unselectSkewer() {
@@ -1339,6 +1371,12 @@ function plotGalaxyImage(idx){
 				prevPointOverIdx = j
 				unselectPoint()
 			})
+			.on('click', (j) =>{
+				//want to move camera to position of galaxy
+				camera.position = galaxies[pointOverIdx].position
+				camera.Translate(0, 0, -r);
+				camera.needsUpdate = true
+			})
 		txt.selectAll('p')
 			.data(lines)
 			.enter()
@@ -1354,8 +1392,8 @@ function plotGalaxyImage(idx){
 				prevPointOverIdx = idx
 				unselectPoint()
 			})
-		$( "div#selectedGalaxies" ).scrollLeft( 0 );
-		
+		//$( "div#selectedGalaxies" ).scrollLeft( 0 );
+		$( "div#selectedGalaxies" ).animate({scrollLeft:  '0' }, 400);
 	}
 	/*d3.selectAll('.galaxyQueue')
 		.on('mouseover', (p) => {
@@ -1793,22 +1831,22 @@ function init() {
 	renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( window.innerWidth - columnWidth, window.innerHeight - 200 );
-	renderer.setClearColor (0x333333, 0.1);
-
+	//renderer.setClearColor (0x333333, 0.1);
 	camera = new THREE.PerspectiveCamera(
-		50 /* fov */, (2*window.innerWidth/3) / (window.innerHeight - 200) /* aspect */,
+		45 /* fov */, (2*window.innerWidth/3) / (window.innerHeight - 200) /* aspect */,
 		0.01 /* near */, 10000 /* far */ );
 	controls = new THREE.OrbitControls( camera, renderer.domElement );
 	controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
 	//controls.autoRotate = false;
 	controls.maxAzimuthAngle = Infinity;
 	controls.maxPolarAngle = Infinity;
-	controls.dampingFactor = 0.5;
+	controls.dampingFactor = 0.4;
 	
 	camera.maxDistance = Infinity;
 
 	scene = new THREE.Scene();
-	scene.fog = new THREE.FogExp2( 0xcccccc, 0.02 );
+	//scene.fog = new THREE.FogExp2( 0xcccccc, 0.02 );
+	scene.background = new THREE.Color( 0x050505 );
 
 	cylinderGroup = new THREE.Group();
 	cylinderBackGroup = new THREE.Group();
@@ -1841,12 +1879,12 @@ function onMouseWheel(event){
 	mouse.x = ( x / (window.innerWidth - columnWidth) ) * 2 - 1;
 	mouse.y = - ( y / (window.innerHeight - 200) ) * 2 + 1;
 	if(mouse.y>-1 && mouse.x < 1){
-		var factor = 4;
+		var factor = 2;
 		//var mX = (event.clientX / jQuery(container).width()) * 2 - 1;
 		//var mY = -(event.clientY / jQuery(container).height()) * 2 + 1;
 
 		//var vector = new THREE.Vector3(mX, mY, 0.1);
-		var vector = new THREE.Vector3(mouse.x, mouse.y, 0.01);
+		var vector = new THREE.Vector3(mouse.x, mouse.y, 1);
 		vector.unproject(camera);
 		vector.sub(camera.position);
 		if (event.deltaY < 0) {
@@ -1865,7 +1903,7 @@ function onMouseWheel(event){
 
 //Creates a gui using the dat.gui library
 function displayGui(){
-	gui = new dat.GUI( {width: 350} );
+	gui = new dat.GUI( {width: (columnWidth/2)} );
 	gui.domElement.id = 'dat-gui';
 
 	//Get the color from the global variables
