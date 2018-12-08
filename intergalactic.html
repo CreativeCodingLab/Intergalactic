@@ -34,7 +34,7 @@
 				display: block;
 				position: fixed;
 				top: 0;
-				right: 0;
+				right: -1px;
 				border-style: solid;
 				border-width: 1px 1px 1px 1px;
 				border-color: #868686;
@@ -78,7 +78,7 @@
 				width: 200px;
 				position: absolute;
   				bottom: 1px;
-  				left: 1px;
+  				left: 195px;
 				float:left;
 
 			}
@@ -87,7 +87,7 @@
 				position: fixed;
 				float: left;
 				bottom: 15px;
-  				left: 210px;
+  				left: 15px;
 				font-size: 13px;
 				text-align: left;
 				line-height: 4px;
@@ -102,7 +102,7 @@
 				bottom: 0px;
 				overflow-x: scroll;
 				left: 395px;
-				right: 33.3%;
+				right: calc(33.3% + 200px);
 				height: 202px;
 				/*bottom: -1px;*/
 				padding-left: 1px;
@@ -149,12 +149,20 @@
 			}
 			#graphs {
 				overflow-y: scroll;
-				height: 80vh;
+				height: calc(100vh - 202px);
 				border-style: solid;
 				border-width: 1px 1px 1px 1px;
 				border-color: #868686;
 				
 			}
+			#selector{
+				margin-top:15px;
+			}
+
+			#selectedGalaxies{
+				overflow-x: scroll;
+			}
+
 			.graph-background {
 				fill: #868686;
 				opacity: 1;
@@ -167,6 +175,7 @@
 				border-style: solid;
 				border-width: 0px 1px 0px 0px;
 				border-color: #868686;
+				
 				
 			}
 			.galaxyQueue-Desc{
@@ -220,15 +229,35 @@
 
 			#imageSaveInstructions{
 				transform: translate(10vw,75px);
-			
-
 			}
 
 			.dg ac{
 				bottom: 0px;
 				right: 0px;
 			}
-
+			
+			#EW-plot{
+				width: 200px;
+				right: 33.3%;
+				fill:white;
+			}
+			#EWplot{
+				width: 200px;
+				right: 33.3%;
+				fill:white;
+			}
+			
+			.dot{
+				fill: black;
+			}
+			.tooltip {
+				position: absolute;
+				width: auto;
+				height: auto;
+				background-color: black;
+				pointer-events: none;
+				text-align: left;
+			}
 		
 
 			a { color: #ff0000 }
@@ -261,11 +290,12 @@
 			<div id="galaxyImage"></div>
 			<div id="galaxyDesc"></div>
 			<div id="selectedGalaxies"></div>
+			<div id="EW-plot"></div>
 			<p id="imageSaveInstructions">Press 'G' to save selected galaxy</p>
 		</div>
 		
 
-		<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+		<script src="libs/jquery-3.3.1.min.js"></script>
 		<script src="libs/math.min.js"></script>
 		<script src="libs/three.js"></script>
 		<script src="libs/OrbitControls.js"></script>

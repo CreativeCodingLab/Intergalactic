@@ -20,6 +20,8 @@ var fluxes = [];
 var EW_stat = 0;
 var spec_wav = [];
 var spec_flux = [];
+var quasar_galaxy_EW_neighbors = []
+var neighbors = []
 
 // instantiate once
 var renderer, scene, camera, controls;
@@ -469,7 +471,7 @@ function veltrans(redshift,waves,line){
 			transline.push(c*(waves[ll]-(1+redshift[ll])*ll)/ll/(1+redshift[ll]))
 		}
 	}
-	console.log(transline)
+	//console.log(transline)
 	return transline 
 }
 
@@ -521,12 +523,10 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 			cont.push(1)
 		}
 	}
-	console.log("cont: " + cont)
+	//console.log("cont: " + cont)
     //### Transform to velocity space
 	let vel=veltrans(zabs,wave,restlam)
-	//console.log(vel)
-	
-	//let velidx=np.where((vel>=vellim[0])&(vel<=vellim[1]))[0] //use find
+
 	let velidx = [];
 	for(i=0;i<vel.length;i++){
 		if(vel[i]>=vellim[0] && vel[i]<=vellim[1]){
@@ -534,23 +534,16 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 		}
 	}
 	
-	/*var found = vel.find(function(element) {
-		return (element >= vellim[0] && element <=vellim[1]);
-	});
-	
-	//var found = vel.indexOf(element >= vellim[0] && element <=vellim[1]);
-	let velidx = vel.indexOf(found)*/
-	console.log("velidx: " + velidx)
+	//console.log("velidx: " + velidx)
 	let velup = vel[velidx[velidx.length - 1]]
-	console.log("velup: " +  velup)
+	//console.log("velup: " +  velup)
 	let veldown = vel[velidx[0]]
-	console.log("veldown: " +  veldown)
+	//console.log("veldown: " +  veldown)
 	let dv = Math.abs(velup-veldown)
-	console.log("dv: " + dv)
+	//console.log("dv: " + dv)
 
     //### Identify pixels where flux level is below noise level & replace w/noise
     let effflux = flux
-	//let belowerr = np.where(flux<ferr)[0]
 	
 	for(i=0;i<flux.length;i++){
 		if(flux[i] < ferr[i]){
@@ -561,18 +554,12 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 			belowerr = -1
 		}
 	}
-
-	/*var found = flux.find(function(element) {
-		return element < ferr
-	});
-	let belowerr = flux.indexOf(found)*/
 	
-	console.log("belowerr: " + belowerr)
+	//console.log("belowerr: " + belowerr)
 	effflux[belowerr] = ferr[belowerr]
-	console.log(effflux[belowerr])
+	//console.log(effflux[belowerr])
 
 	//### Calculate EW and errors due to flux and continuum placement
-	//let EWpix = dv * (1.-effflux[velidx]/cont[velidx])*restlam/c
 	let EWpix = [];
 	let sigEWf = [];
 	let tauv = [];
@@ -587,30 +574,26 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 		tauv.push(n)
 		tauverr_f.push(o)
 	}
-	console.log("EWpix: " +  EWpix)
-	console.log("sigEWf: " +  sigEWf)
-	console.log("tauv: " + tauv)
-	console.log("tauverr_f" + tauverr_f)
-	
-	//let sigEWf = dv / cont[velidx[0]] * ferr[velidx[0]] * restlam/c
+	//console.log("EWpix: " +  EWpix)
+	//console.log("sigEWf: " +  sigEWf)
+	//console.log("tauv: " + tauv)
+	//console.log("tauverr_f" + tauverr_f)
+
     //### Calculate optical depth and uncertainty due to flux and continuum
 	
 	let Npix=math.multiply(1/(2.654e-15)/restlam/fosc*dv,tauv)
-	console.log("Npix: " + Npix)
+	//console.log("Npix: " + Npix)
     let sigNf = math.multiply(1./2.654e-15/restlam/fosc*dv,tauverr_f)
-	console.log("sigNf:" + sigNf)
+	//console.log("sigNf:" + sigNf)
 	return [EWpix,sigEWf,Npix,sigNf]
 }
 
 
 function EW_ACD(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=1215.67,fosc=0.4164){
-    /*'''
+    /*
     Calculates the equivalent width, apparent column density, and their
     associated errors a la Sembach & Savage 1992.
-
-    '''
-    */
-	// If not continuum provided, assume spectrum is normalized
+	If no continuum provided, assume spectrum is normalized*/
 	
 	if(cont == "None"){
 		cont = []
@@ -618,22 +601,22 @@ function EW_ACD(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=1215.67,
 			cont.push(1)
 		}
 	}
-	console.log(EW_ACD_array(wave,flux,ferr,zabs,vellim,cont,restlam,fosc))
+	//console.log(EW_ACD_array(wave,flux,ferr,zabs,vellim,cont,restlam,fosc))
 	let EWarray = EW_ACD_array(wave,flux,ferr,zabs,vellim,cont,restlam,fosc)
 	let EWpix = EWarray[0],
 	sigEWf = EWarray[1],
 	Npix = EWarray[2],
 	sigNf = EWarray[3]
-	console.log("EWpix: " + EWpix)
-	console.log("sigEWf: " + sigEWf)
-	console.log("Npix: " + Npix)
-	console.log("sigNf: " + sigNf)
+	//console.log("EWpix: " + EWpix)
+	//console.log("sigEWf: " + sigEWf)
+	//console.log("Npix: " + Npix)
+	//console.log("sigNf: " + sigNf)
 
     // Totals and errors from each contribution
 	let EW = math.sum(EWpix)
-	console.log("EW: " + EW)
+	//console.log("EW: " + EW)
     let N = math.sum(Npix)
-	console.log("N: " + N)
+	//console.log("N: " + N)
 
 	let k = 0
 	for(i=0;i<sigEWf.length;i++){
@@ -641,13 +624,13 @@ function EW_ACD(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=1215.67,
 	}
 	// Sum flux error contributions in quadrature
     let sigEWf_tot = math.sqrt(k)
-	console.log("sigEWf_tot: " + sigEWf_tot)
+	//console.log("sigEWf_tot: " + sigEWf_tot)
 	k = 0
 	for(i=0;i<sigNf.length;i++){
 		k+=math.pow(sigNf[i],2)
 	}
 	let sigNf_tot = math.sqrt(k)
-	console.log("sigNf_tot: " + sigNf_tot)
+	//console.log("sigNf_tot: " + sigNf_tot)
 	return [EW,sigEWf_tot,N,sigNf_tot]
 }
 
@@ -669,21 +652,19 @@ function selectZ(){
 }
 
 function getSkewerSpectra(){
-	let k = EW_selected
+	let k = EW_selected[1]
 	waves = [];
 	fluxes = [];
-	for(i =0;i<EW_selected.length;i++){
-		if(EW_selected[i].key == "HI" || EW_selected[i].key == "CIV"){
-			let k_spec = EW_selected[i].value
-			console.log(k_spec)
+	//console.log[k]
+	for(i =0;i<k.length;i++){
+		if(k[i].key == "HI" || k[i].key == "CIV"){
+			let k_spec = k[i].value
+			//console.log(k_spec)
 			for(j=0;j<k_spec.length;j++){
 				reds[j] = k_spec[j].redshift
-				//waves[j] = k_spec[j].wavelength
-				//fluxes[j] = k_spec[j].flux_norm
 			}
-			//console.log(reds, waves, fluxes)
-			let leftIdx = reds.indexOf(z_left)
-			let rightIdx = reds.indexOf(z_right)
+			var leftIdx = reds.indexOf(z_left)
+			var rightIdx = reds.indexOf(z_right)
 			//some spectra do not have the exact redshift value it is looking for
 			//below it searches for the closest value in the vector
 			if(rightIdx == -1){
@@ -700,37 +681,145 @@ function getSkewerSpectra(){
 				});
 				leftIdx = reds.indexOf(closestL);
 			}
-			console.log(leftIdx,rightIdx)
-			//for(m=0;m<(rightIdx-leftIdx);m++){
+			//console.log(leftIdx,rightIdx)
 			//below it is storing just the selected spectra wavelength and flux
 			for(w=leftIdx;w<rightIdx;w++){
 				waves.push(k_spec[w].wavelength)
 				fluxes.push(k_spec[w].flux_norm)
 				ferr.push(k_spec[w].sig_norm)
 			}
-			/*for(i=0;i<waves.length;i++){
-				ferr.push(0.01) //filler array
-			}*/
-			console.log(reds, waves, fluxes, ferr)
-			let EW_out = EW_ACD(waves,fluxes,ferr,z_abs,vellim=[-50,50],cont="None",restlam=1215.67,fosc=0.4164)
-			console.log(EW_out)
-			EW_all.push(EW_out)
-
-
-
+			//console.log(reds, waves, fluxes, ferr)
 		}
 	}
+	let EW_out = EW_ACD(waves,fluxes,ferr,z_abs,vellim=[-50,50],cont="None",restlam=1215.67,fosc=0.4164)
+	//console.log(EW_out) // EW_out = [EW,sigEWf_tot,N,sigNf_tot]
+	EW_all.push([EW_selected[0],EW_out[0],reds[leftIdx],reds[rightIdx]])
+	EW_plot();
+}
+function EW_plot_init(){
+	d3.select('#bottom-panel').selectAll('#EW-plot').select('#EWplot').remove()
+	let ret = d3.select('#bottom-panel').selectAll('#EW-plot').append('svg')
+		.attr('id','EWplot')
+		.attr("width", 200)
+		.attr("height", 200)
+		.attr("transform", "translate(" + (window.innerWidth-columnWidth -200) + ",0)")
+		.style('fill', '#868686')
+	ret.append('rect')
+			.attr('x',0)
+			.attr('y',0)
+			.attr('width', 200)
+			.attr('height', 200)
+			.attr('fill', '#868686')
+}
+function EW_plot(){
 	
-/*
-	let leftIdx = z_left
-	let rightIdx = z_right
-	console.log()
+	d3.select("body").select('#bottom-panel').select('#EW-plot').select('#EWplot').selectAll('g').remove()
+	//var svg = d3.select("body").select('#bottom-panel').select('#EW-plot').select('#EWplot')
+	var xScale = d3.scaleLinear()
+		.domain([0,distanceFromSkewer])
+		.range([0,155])
+	var yScale = d3.scaleLinear()
+		.domain([10,0])
+		.range([0,170])
+	var svg = d3.select("body").select('#bottom-panel').select('#EW-plot').select('#EWplot').append('svg')
+		.append("g")
+		.attr('transform','translate(30,180)')
+	var tooltip = d3.select("body").append("div")
+		.attr("class", "tooltip")
+		.style("opacity", 0);
+	var xAxis = d3.axisBottom()
+		.scale(xScale)
+		.ticks(6)
+	// Y-axis
+	var yAxis = d3.axisLeft()
+		.scale(yScale)
+	svg.append("g")
+		.attr("class","xAxis")
+		.call(xAxis);
+	svg.append("g")
+		.attr("class","yAxis")
+		.call(yAxis)
+		.attr('transform','translate(0,-170)')
 
-	
-	
-	//return waves, fluxes, ferr
-	EW_ACD(w,f,f_err,zabs,vellim=[-50,50],cont="None",restlam=1215.67,fosc=0.4164)
-	*/
+	neighbors = []
+	for(i=0;i<EW_all.length;i++){
+		let fnew = filterNeighborsEW(EW_all[i][1],EW_all[i][2],EW_all[i][3],EW_all[i][0])
+		for(j=0; j< fnew.length; j++){
+			neighbors.push(fnew[j]) //in: zmin zmax skewername out: skewername nsaid impactparam
+		}
+	}
+	//console.log(neighbors)
+	// setup x 
+	svg.selectAll(".dot")
+        .data(neighbors)
+		.enter().append("circle")
+		.attr("class", "dot")
+        .attr("r", 3.5)
+        .attr("cx", function(d) {
+            return xScale(d.ip);
+        })
+        .attr("cy", function(d) {
+            return yScale(d.ew)-170;
+		})
+		.on("mouseover", function(d) {
+			tooltip.transition()
+				 .duration(200)
+				 .style("opacity", 0.75);
+			tooltip.html("QSO: " + d.skewer + "<br/> NSAID: " + d.NSAID + "<br/> IP: " + d.ip + "<br/> EW: " + roundtofive(d.ew))
+				 .style("left", (d3.event.pageX - 25) + "px")
+				 .style("top", (d3.event.pageY - 70) + "px");
+		})
+		.on("mouseout", function(d) {
+			tooltip.transition()
+				 .duration(200)
+				 .style("opacity", 0);
+		});
+		
+		
+
+/*
+	var xValue = function(d) { return d.ip}, // data -> value
+	xMap = function(d) { return xScale(xValue(d));} // data -> display
+
+	// setup y
+	var yValue = function(d) { return d.ew;}, // data -> value
+	yMap = function(d) { return yScale(yValue(d));} // data -> display*/
+
+}
+
+function filterNeighborsEW(EW,z_min,z_max,skewerName){
+	let mn = z_min
+	let mx = z_max
+	let i = skewer.indexOf(skewerName)
+	console.log('z_min:' + mn)
+	console.log('z_max:' + mx)
+	console.log('skewer: ' + i)
+	quasar_galaxy_EW_neighbors = []
+	if(i != -1){
+		let k = skewer[i], //v = skewerData.get(k),
+			p = projections[i]; // load cache of this skewer
+		if(p){
+			for (let j = 0; j < galaxies.length; ++j) {						
+				let dist = p[j] // .distanceTo(galaxies[j].position)
+				let u = galaxies[j];
+				if (dist < distanceFromSkewer && mn<u.redshift && mx>u.redshift) { // filter, then map
+					var qgew = {
+						'skewer': skewerName,
+						'NSAID': u.NSAID,
+						'z-min': z_min,
+						'z-max': z_max,
+						'ip': dist[0],
+						'ew': EW
+					}
+					if(!quasar_galaxy_EW_neighbors.includes(qgew)){
+						quasar_galaxy_EW_neighbors.push(qgew)
+					}
+				}
+			}
+		}
+	}
+	//console.log(qgew)
+	return quasar_galaxy_EW_neighbors;
 }
 
 
@@ -949,7 +1038,7 @@ function onMouseMove( event ) {
 	raycaster.setFromCamera( mouse, camera );
 
 
-	if(mouse.y>-1){
+	if(mouse.y>-1 && mouse.x<1){
 		// calculate objects intersecting the picking ray
 		var intersects = raycaster.intersectObjects( scene.children );
 		pointOverIdx = -1;
@@ -1070,6 +1159,7 @@ function plotSkewerSpectra() {
 			
 		}
 		if(i[w] != -1){
+			let skewIdx = i[w]
 			if (pointOverIdx != -1) {
 				let j = pointOverIdx,
 					u = galaxies[j]
@@ -1103,6 +1193,7 @@ function plotSkewerSpectra() {
 							//.attr('stroke', u.key == 'HI' ? '#f4eaff' : '#ffd6ce' )
 							//.attr('stroke', u.key == 'HI' ? '#9aeab9' : '#9aeab9' )
 							.attr('fill', 'none')
+							//.on('mousedown'){}
 							.on('click', function() {
 								var x0 = x.invert(d3.mouse(this)[0]),
 								y0 = y.invert(d3.mouse(this)[1])
@@ -1114,7 +1205,7 @@ function plotSkewerSpectra() {
 								
 								//d = x0 - d0.date > d1.date - x0 ? d1 : d0;
 								if(E_pressed){
-									EW_selected = spectra
+									EW_selected = [skewer[skewIdx],spectra]
 									console.log(EW_selected)
 									console.log(x0,y0)
 									console.log(EW_stat)
@@ -1142,7 +1233,7 @@ function plotSkewerSpectra() {
 						.attr("id","border")
 						.attr("transform","translate(-40,-20)")
 						.attr("width",columnWidth+20)
-						.attr("height",graphHeight)
+						.attr("height",graphHeight+50)
 						//.attr("style","stroke: #5b5b5b;stroke-width: 50; fill: none;")
 					if(w>0){
 						graph.append('text')
@@ -1272,14 +1363,14 @@ function plotSkewerNeighbors() {
 						.attr('height', 2*halfSize)
 						//.attr('fill', '#ffff00')
 						//.attr('opacity', 1 / (30*dist + 1))
-						//.attr('opacity', 1)
+						.attr('opacity', .7)
 						.datum(j)
 						.style('fill', (j) => {
 							if(currentGalaxy[1] && currentGalaxy[1] == (j)){
 								return('#ffaaaa')
 							}
 							if(selectedGalaxies.includes(j)){
-								return('#aaaaff')
+								return('#5e5eff')
 							}
 						})
 						/*.on('mouseover', (j) => {
@@ -1450,6 +1541,7 @@ function createSlider(init = distanceFromSkewer) {
 				filterGalaxiesNearSkewers()
 			}
 			plotSkewerNeighbors();
+			EW_plot();
 		})
 
 	svg.append('g') // d3.event wants to be relative to a group
@@ -1833,7 +1925,7 @@ function init() {
 	renderer.setSize( window.innerWidth - columnWidth, window.innerHeight - 200 );
 	//renderer.setClearColor (0x333333, 0.1);
 	camera = new THREE.PerspectiveCamera(
-		45 /* fov */, (2*window.innerWidth/3) / (window.innerHeight - 200) /* aspect */,
+		54 /* fov */, (window.innerWidth - columnWidth) / (window.innerHeight - 200) /* aspect */,
 		0.01 /* near */, 10000 /* far */ );
 	controls = new THREE.OrbitControls( camera, renderer.domElement );
 	controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
@@ -1870,6 +1962,7 @@ function init() {
 	document.addEventListener( 'keydown', onKeyDown, false );
 	var container = document.getElementById( 'container' );
 	container.appendChild( renderer.domElement );
+	EW_plot_init()
 }
 
 function onMouseWheel(event){
@@ -1879,7 +1972,7 @@ function onMouseWheel(event){
 	mouse.x = ( x / (window.innerWidth - columnWidth) ) * 2 - 1;
 	mouse.y = - ( y / (window.innerHeight - 200) ) * 2 + 1;
 	if(mouse.y>-1 && mouse.x < 1){
-		var factor = 2;
+		var factor = 4;
 		//var mX = (event.clientX / jQuery(container).width()) * 2 - 1;
 		//var mY = -(event.clientY / jQuery(container).height()) * 2 + 1;
 
@@ -2005,8 +2098,6 @@ function onWindowResize() {
 	renderer.setSize( (window.innerWidth - columnWidth), window.innerHeight - 200 );
 	camera.aspect = (window.innerWidth - columnWidth) / (window.innerHeight - 200);
 	camera.updateProjectionMatrix();
-
-
 	let n = graphs.length;
 	for(w=0;w<n;w++){
 		//let graph = graphs[w];
@@ -2016,6 +2107,8 @@ function onWindowResize() {
 	graphs = createGraph(n_skewers);
 	plotSkewerSpectra(xScale, yScale);
 	plotSkewerSpectra();
+	EW_plot_init()
+	EW_plot()
 
 
 }
