@@ -22,6 +22,7 @@ var spec_wav = [];
 var spec_flux = [];
 var quasar_galaxy_EW_neighbors = []
 var neighbors = []
+var v = []
 
 // instantiate once
 var renderer, scene, camera, controls;
@@ -404,6 +405,7 @@ let computeProjections = () => {
 
 //used to calculate angular distance from projection computation
 function haversine(dec1, dec2, ra1, ra2, redshift){
+	//https://www.movable-type.co.uk/scripts/latlong.html
 	let z = lookUp(redshift) //converts redshift to meaningful distance in Mpc
 	let lat1 = dec1.toRad()
 	let lat2 = dec2.toRad()
@@ -471,7 +473,7 @@ function veltrans(redshift,waves,line){
 			transline.push(c*(waves[ll]-(1+redshift[ll])*ll)/ll/(1+redshift[ll]))
 		}
 	}
-	//console.log(transline)
+	console.log(transline)
 	return transline 
 }
 
@@ -523,24 +525,32 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 			cont.push(1)
 		}
 	}
-	//console.log("cont: " + cont)
+	console.log("cont: " + cont)
     //### Transform to velocity space
 	let vel=veltrans(zabs,wave,restlam)
-
+	console.log('vel: ' + vel)
 	let velidx = [];
+	
+	v[0] = wave[0] 
+	v[1] = wave[wave.length-1]
+	vellim = veltrans(zabs,v,restlam)
+	console.log(v)
+	console.log(vellim)
 	for(i=0;i<vel.length;i++){
 		if(vel[i]>=vellim[0] && vel[i]<=vellim[1]){
 			velidx.push(i)
 		}
 	}
 	
-	//console.log("velidx: " + velidx)
-	let velup = vel[velidx[velidx.length - 1]]
-	//console.log("velup: " +  velup)
+	console.log("velidx: " + velidx)
+	//let velup = vel[velidx[velidx.length - 1]]
+	let velup = vel[velidx[1]]
+	console.log("velup: " +  velup)
+	//let veldown = vel[velidx[0]]
 	let veldown = vel[velidx[0]]
-	//console.log("veldown: " +  veldown)
+	console.log("veldown: " +  veldown)
 	let dv = Math.abs(velup-veldown)
-	//console.log("dv: " + dv)
+	console.log("dv: " + dv)
 
     //### Identify pixels where flux level is below noise level & replace w/noise
     let effflux = flux
@@ -555,36 +565,45 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 		}
 	}
 	
-	//console.log("belowerr: " + belowerr)
+	console.log("belowerr: " + belowerr)
 	effflux[belowerr] = ferr[belowerr]
-	//console.log(effflux[belowerr])
+	console.log(effflux[belowerr])
 
 	//### Calculate EW and errors due to flux and continuum placement
 	let EWpix = [];
 	let sigEWf = [];
 	let tauv = [];
 	let tauverr_f = [];
+
+	console.log('LOOK HERE')
+	console.log('dv :' + dv)
+	console.log('velidx: ' + velidx)
+	console.log('effflux: ' + effflux)
+	console.log('cont: ' + cont)
+	console.log('restlam: ' + restlam)
+	console.log('c: ' + c)
 	for(i=0;i<velidx.length;i++){
 		let l = dv*(1-effflux[velidx[i]]/cont[velidx[i]])*restlam/c
 		let m = dv / cont[velidx[i]] * ferr[velidx[i]] * restlam/c
-		let n = math.log(cont[velidx[0]]/(effflux[velidx[0]]))
-		let o = ferr[velidx[0]]/effflux[velidx[0]]
+		let n = math.log(cont[velidx[i]]/(effflux[velidx[i]]))
+		let o = ferr[velidx[i]]/effflux[velidx[i]]
 		EWpix.push(l)
 		sigEWf.push(m)
 		tauv.push(n)
 		tauverr_f.push(o)
 	}
-	//console.log("EWpix: " +  EWpix)
-	//console.log("sigEWf: " +  sigEWf)
-	//console.log("tauv: " + tauv)
-	//console.log("tauverr_f" + tauverr_f)
+	console.log(EWpix)
+	console.log("EWpix: " +  EWpix)
+	console.log("sigEWf: " +  sigEWf)
+	console.log("tauv: " + tauv)
+	console.log("tauverr_f" + tauverr_f)
 
     //### Calculate optical depth and uncertainty due to flux and continuum
 	
 	let Npix=math.multiply(1/(2.654e-15)/restlam/fosc*dv,tauv)
-	//console.log("Npix: " + Npix)
+	console.log("Npix: " + Npix)
     let sigNf = math.multiply(1./2.654e-15/restlam/fosc*dv,tauverr_f)
-	//console.log("sigNf:" + sigNf)
+	console.log("sigNf:" + sigNf)
 	return [EWpix,sigEWf,Npix,sigNf]
 }
 
@@ -601,20 +620,22 @@ function EW_ACD(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=1215.67,
 			cont.push(1)
 		}
 	}
+
 	//console.log(EW_ACD_array(wave,flux,ferr,zabs,vellim,cont,restlam,fosc))
 	let EWarray = EW_ACD_array(wave,flux,ferr,zabs,vellim,cont,restlam,fosc)
 	let EWpix = EWarray[0],
 	sigEWf = EWarray[1],
 	Npix = EWarray[2],
 	sigNf = EWarray[3]
-	//console.log("EWpix: " + EWpix)
-	//console.log("sigEWf: " + sigEWf)
-	//console.log("Npix: " + Npix)
-	//console.log("sigNf: " + sigNf)
+	console.log("EWpix: " + EWpix)
+	console.log("sigEWf: " + sigEWf)
+	console.log("Npix: " + Npix)
+	console.log("sigNf: " + sigNf)
 
     // Totals and errors from each contribution
 	let EW = math.sum(EWpix)
-	//console.log("EW: " + EW)
+	//console.log(EW)
+	console.log("EW: " + EW)
     let N = math.sum(Npix)
 	//console.log("N: " + N)
 
@@ -637,18 +658,25 @@ function EW_ACD(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=1215.67,
 function pressLeft(){
 	z_left = EW_coord[0]
 	console.log("z_left: " + z_left)
+	d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
+	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('left boundary selected')
 	//f = EW_coord[1]
 }
 
 function pressRight(){
 	z_right = EW_coord[0]
 	console.log("z_right: " + z_right)
+	d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
+	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('right boundary selected')
 }
 
 function selectZ(){
 	z_abs = EW_coord[0]
 	console.log("z_abs: " + z_abs)
+	d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
+	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('center point selected')
 	getSkewerSpectra();
+	d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
 }
 
 function getSkewerSpectra(){
@@ -691,9 +719,10 @@ function getSkewerSpectra(){
 			//console.log(reds, waves, fluxes, ferr)
 		}
 	}
+	
 	let EW_out = EW_ACD(waves,fluxes,ferr,z_abs,vellim=[-50,50],cont="None",restlam=1215.67,fosc=0.4164)
 	//console.log(EW_out) // EW_out = [EW,sigEWf_tot,N,sigNf_tot]
-	EW_all.push([EW_selected[0],EW_out[0],reds[leftIdx],reds[rightIdx]])
+	EW_all.push([EW_selected[0],EW_out[0],reds[leftIdx],reds[rightIdx],EW_out[1]])
 	EW_plot();
 }
 function EW_plot_init(){
@@ -702,7 +731,7 @@ function EW_plot_init(){
 		.attr('id','EWplot')
 		.attr("width", 200)
 		.attr("height", 200)
-		.attr("transform", "translate(" + (window.innerWidth-columnWidth -200) + ",0)")
+		.attr("transform", "translate(" + (window.innerWidth-columnWidth - 200) + ",0)")
 		.style('fill', '#868686')
 	ret.append('rect')
 			.attr('x',0)
@@ -710,16 +739,29 @@ function EW_plot_init(){
 			.attr('width', 200)
 			.attr('height', 200)
 			.attr('fill', '#868686')
+	EW_plot()
+	/*d3.select('#bottom-panel').selectAll('#EW-plot').append('p')
+		.attr('id','EWplotInstructions')
+		.text('Equivalent Width Plot Instructions: <br/> Within the skewer panel... <br/> 1. Press "E" and select left boundary <br/> 2. Press "E" and select right boundary <br/>3. Press "E" and select center reference point')*/
 }
 function EW_plot(){
-	
+	neighbors = []
+	for(i=0;i<EW_all.length;i++){
+		let fnew = filterNeighborsEW(EW_all[i][1],EW_all[i][2],EW_all[i][3],EW_all[i][0],EW_all[i][4])
+		//for(j=0; j< fnew.length; j++){
+		if(fnew){
+			neighbors.push(fnew)
+		}
+		 //in: zmin zmax skewername out: skewername nsaid impactparam
+		//}
+	}
 	d3.select("body").select('#bottom-panel').select('#EW-plot').select('#EWplot').selectAll('g').remove()
 	//var svg = d3.select("body").select('#bottom-panel').select('#EW-plot').select('#EWplot')
 	var xScale = d3.scaleLinear()
 		.domain([0,distanceFromSkewer])
 		.range([0,155])
 	var yScale = d3.scaleLinear()
-		.domain([10,0])
+		.domain([1,0])
 		.range([0,170])
 	var svg = d3.select("body").select('#bottom-panel').select('#EW-plot').select('#EWplot').append('svg')
 		.append("g")
@@ -741,33 +783,125 @@ function EW_plot(){
 		.call(yAxis)
 		.attr('transform','translate(0,-170)')
 
-	neighbors = []
-	for(i=0;i<EW_all.length;i++){
-		let fnew = filterNeighborsEW(EW_all[i][1],EW_all[i][2],EW_all[i][3],EW_all[i][0])
-		for(j=0; j< fnew.length; j++){
-			neighbors.push(fnew[j]) //in: zmin zmax skewername out: skewername nsaid impactparam
-		}
-	}
-	//console.log(neighbors)
-	// setup x 
+	
+	//add error line
+	svg.append("g").selectAll("line")
+		.data(neighbors).enter()
+		.append("line")
+		.attr("class", "error-line")
+		.attr("x1", function(d) {
+			console.log(d.ip)
+			console.log(xScale(d.ip))
+			return xScale(d.ip);
+		})
+		.attr("y1", function(d) {
+			if(d.ew < 3*d.sigEWf){
+				//let ew = 3*sigEWf
+				//return yScale(ew + d.sigEWf)-170;
+				return 0
+			}
+			else{
+				return yScale(d.ew + d.sigEWf)-170;
+			}
+			/*console.log(d.ew)
+			console.log(d.sigEWf)
+			console.log(yScale(d.ew + d.sigEWf))*/
+			
+		})
+		.attr("x2", function(d) {
+			return xScale(d.ip);
+		})
+		.attr("y2", function(d) {
+			if(d.ew < 3* d.sigEWf){
+				let ew = 3*d.sigEWf
+				return yScale(ew - d.sigEWf)-170;
+			}
+			else{
+				return yScale(d.ew - d.sigEWf)-170;
+			}
+		})
+		.attr('stroke',function(d){
+			return d.color
+		})
+
+		// Add Error Top Cap
+	svg.append("g").selectAll("line")
+		.data(neighbors).enter()
+		.append("line")
+		.attr("class", "error-cap")
+		.attr("x1", function(d) {
+			return xScale(d.ip) - 4;
+		})
+		.attr("y1", function(d) {
+			if(d.ew < 3*d.sigEWf){
+				//let ew = 3*sigEWf
+				//return yScale(ew + d.sigEWf)-170;
+				return 0
+			}
+			else{
+				return yScale(d.ew + d.sigEWf)-170;
+			}
+		})
+		.attr("x2", function(d) {
+			return xScale(d.ip) + 4;
+		})
+		.attr("y2", function(d) {
+			if(d.ew < 3* d.sigEWf){
+				let ew = 3*d.sigEWf
+				yScale(ew + d.sigEWf)-170;
+			}
+			else{
+				return yScale(d.ew + d.sigEWf)-170;
+			}
+		})
+		.attr('stroke',function(d){
+			return d.color
+		})
+		
+		// Add Error Bottom Cap
+	svg.append("g").selectAll("line")
+		.data(neighbors).enter()
+		.append("line")
+		.attr("class", "error-cap")
+		.attr("x1", function(d) {
+			return xScale(d.ip) - 4;
+		})
+		.attr("y1", function(d) {
+			return yScale(d.ew - d.sigEWf)-170;
+		})
+		.attr("x2", function(d) {
+			return xScale(d.ip) + 4;
+		})
+		.attr("y2", function(d) {
+			return yScale(d.ew - d.sigEWf)-170;
+		})
+		.attr('stroke',function(d){
+			return d.color
+		})
+			//console.log(neighbors)
+			// setup x 
 	svg.selectAll(".dot")
         .data(neighbors)
 		.enter().append("circle")
 		.attr("class", "dot")
-        .attr("r", 3.5)
+        .attr("r", 2)
         .attr("cx", function(d) {
             return xScale(d.ip);
-        })
+		})
         .attr("cy", function(d) {
             return yScale(d.ew)-170;
+		})
+		.attr('fill',function(d){
+			return d.color
 		})
 		.on("mouseover", function(d) {
 			tooltip.transition()
 				 .duration(200)
 				 .style("opacity", 0.75);
-			tooltip.html("QSO: " + d.skewer + "<br/> NSAID: " + d.NSAID + "<br/> IP: " + d.ip + "<br/> EW: " + roundtofive(d.ew))
+			tooltip.html("QSO: " + d.skewer + "<br/> NSAID: " + d.NSAID + "<br/> IP: " + d.ip + " Mpc <br/> EW: " + roundtofive(d.ew) + " Å <br/> zmin: " + d.zmin + "<br/> zmax: " + d.zmax + "<br/> zabs: " + d.zabs + "<br/> velmin: " + d.velmin + " km/s <br/> velmax: " + d.velmax + "km/s")
 				 .style("left", (d3.event.pageX - 25) + "px")
-				 .style("top", (d3.event.pageY - 70) + "px");
+				 .style("top", (d3.event.pageY - 150) + "px");
+			plotGalaxyImage(d.gidx)
 		})
 		.on("mouseout", function(d) {
 			tooltip.transition()
@@ -787,7 +921,7 @@ function EW_plot(){
 
 }
 
-function filterNeighborsEW(EW,z_min,z_max,skewerName){
+function filterNeighborsEW(EW,z_min,z_max,skewerName,err){
 	let mn = z_min
 	let mx = z_max
 	let i = skewer.indexOf(skewerName)
@@ -806,10 +940,16 @@ function filterNeighborsEW(EW,z_min,z_max,skewerName){
 					var qgew = {
 						'skewer': skewerName,
 						'NSAID': u.NSAID,
-						'z-min': z_min,
-						'z-max': z_max,
-						'ip': dist[0],
-						'ew': EW
+						'zmin': z_min,
+						'zmax': z_max,
+						'ip': +dist[0],
+						'ew': EW,
+						'zabs': z_abs,
+						'velmin': v[0],
+						'velmax': v[1],
+						'gidx': j,
+						'color': u.color,
+						'sigEWf':err
 					}
 					if(!quasar_galaxy_EW_neighbors.includes(qgew)){
 						quasar_galaxy_EW_neighbors.push(qgew)
@@ -819,7 +959,13 @@ function filterNeighborsEW(EW,z_min,z_max,skewerName){
 		}
 	}
 	//console.log(qgew)
-	return quasar_galaxy_EW_neighbors;
+	let x;
+	
+	x = quasar_galaxy_EW_neighbors.sort(function(a, b){
+		return a.ip-b.ip
+	})
+	console.log(x[0])
+	return x[0];
 }
 
 
@@ -838,11 +984,10 @@ function onKeyDown(event) {
 
 	if( keyChar == 'E'){
 		E_pressed = true;
-		//EW_ACD(w,f,f_err,zabs,vellim=[-50,50],cont="None",restlam=1215.67,fosc=0.4164))))
-
-		//let w, f, f_err = getSkewerSpectra()
-		
-		//EW_ACD(w,f,f_err,zabs,vellim=[-50,50],cont="None",restlam=1215.67,fosc=0.4164)
+		if(EW_stat == 0){
+			d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
+			d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('select left boundary')
+		}
 	}
 	
 	
@@ -975,14 +1120,17 @@ function selectPoint() {
 	cs[pointOverIdx] = 1.0;
 	prevPointOverIdx = pointOverIdx;
 	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+
+	plotGalaxyImage(pointOverIdx)
 	
 	//updates color of selected skewer neighbor (galaxy) to red when hovered over
-	// d3.selectAll('.mark')
-	// 	.on('mouseover', (j) => {
-	// 		d3.selectAll('.g'+pointOverIdx)
-	// 			.style('fill','red')
-	// 	})
-
+	/*
+	d3.selectAll('.mark')
+		.on('mouseover', (j) => {
+			d3.selectAll('.g'+pointOverIdx)
+				.style('fill','red')
+		})
+*/
 }
 function unselectPoint() {
 	var cs = boxOfPoints.geometry.attributes.isSelected.array;
@@ -1458,17 +1606,18 @@ function plotGalaxyImage(idx){
 			.on('mouseover', (j) => {
 				pointOverIdx = j //;
 				selectPoint()
+				
 			})
 			.on('mouseout', (j) =>{
 				prevPointOverIdx = j
 				unselectPoint()
 			})
-			.on('click', (j) =>{
+			/*.on('click', (j) =>{
 				//want to move camera to position of galaxy
 				camera.position = galaxies[pointOverIdx].position
 				camera.Translate(0, 0, -r);
 				camera.needsUpdate = true
-			})
+			})*/
 		txt.selectAll('p')
 			.data(lines)
 			.enter()
