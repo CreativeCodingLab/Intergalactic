@@ -977,11 +977,11 @@ function selectPoint() {
 	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
 	
 	//updates color of selected skewer neighbor (galaxy) to red when hovered over
-	d3.selectAll('.mark')
-		.on('mouseover', (j) => {
-			d3.selectAll('.g'+pointOverIdx)
-				.style('fill','red')
-		})
+	// d3.selectAll('.mark')
+	// 	.on('mouseover', (j) => {
+	// 		d3.selectAll('.g'+pointOverIdx)
+	// 			.style('fill','red')
+	// 	})
 
 }
 function unselectPoint() {
@@ -1367,10 +1367,10 @@ function plotSkewerNeighbors() {
 						.datum(j)
 						.style('fill', (j) => {
 							if(currentGalaxy[1] && currentGalaxy[1] == (j)){
-								return('#ffaaaa')
+								return('#ffaaaa')	// red
 							}
 							if(selectedGalaxies.includes(j)){
-								return('#5e5eff')
+								return('#5e5eff')	// blue
 							}
 						})
 						/*.on('mouseover', (j) => {
