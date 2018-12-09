@@ -1434,7 +1434,7 @@ function plotGalaxyImage(idx){
 		galaxyImage.append('img')
 			//.attr('src', 'data/galaxyImages_partial/' + g.NSAID + '.jpg')
 			.attr('src', 'data/galaxyImages/' + g.NSAID + '.jpg')
-			.attr('width', '200px')
+			.attr('width', '160px')
 			.on('mouseover', (j) => {			
 				pointOverIdx = idx //;
 				selectPoint()
@@ -1453,7 +1453,8 @@ function plotGalaxyImage(idx){
 			.attr('class','galaxyQueue')
 		svg.append('img')
 			.attr('src', 'data/galaxyImages/' + g.NSAID + '.jpg')
-			.attr('height', '200px')
+			.attr('height', '160px')
+			.attr('padding', '10px')
 			.on('mouseover', (j) => {
 				pointOverIdx = j //;
 				selectPoint()

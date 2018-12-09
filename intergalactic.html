@@ -57,7 +57,7 @@
 			}
 
 			#bottom-panel {
-				background-color: #1d1d1d;
+				background-color: #232323;
 				height: 202px;
 				width: 66.6%;
 				left: 0;
@@ -71,14 +71,16 @@
 			}
 
 			#galaxyImage{
-				background-color: #000000;
+				/*background-color: #000000;*/
 				/*height:16.5vw;
 				width: 16.5vw;*/
-				height: 200px;
-				width: 200px;
+				height: 180px;
+				width: 180px;
+				padding: 10px;
 				position: absolute;
+				top: 10px;
   				bottom: 1px;
-  				left: 195px;
+  				left: 155px;
 				float:left;
 
 			}
@@ -86,12 +88,12 @@
 				display: block;
 				position: fixed;
 				float: left;
-				bottom: 15px;
+				bottom: 20px;
   				left: 15px;
 				font-size: 13px;
 				text-align: left;
 				line-height: 4px;
-				
+				overflow-wrap: break-word;
 			}
 
 			#selectedGalaxies {
@@ -101,11 +103,12 @@
 				float: left;
 				bottom: 0px;
 				overflow-x: scroll;
-				left: 395px;
+				left: 355px;
 				right: calc(33.3% + 200px);
 				height: 202px;
 				/*bottom: -1px;*/
-				padding-left: 1px;
+				padding-left: 10px;
+				padding-right: 10px;
 				border-style: solid;
 				border-width: 1px 1px 1px 1px;
 				border-color: #868686;
@@ -135,10 +138,10 @@
 			}
 
 			.penHI {
-				stroke: #1c1d23;
+				stroke: #636363;
 			}
 			.penCIV {
-				stroke: #1c1d23;
+				stroke: #636363;
 			}
 
 			#border {
@@ -164,7 +167,7 @@
 			}
 
 			.graph-background {
-				fill: #868686;
+				fill: #232323;
 				opacity: 1;
 			}
 			.mark{ 
@@ -172,19 +175,20 @@
 				opacity: 0.75; 
 			}
 			.galaxyQueue{
-				border-style: solid;
+				/* border-style: solid;
 				border-width: 0px 1px 0px 0px;
-				border-color: #868686;
-				
+				border-color: #868686; */
+				padding: 20px;
 				
 			}
 			.galaxyQueue-Desc{
 				display: inline-block;
 				font-size: 13px;
 				text-align: left;
-				line-height: 8px;
-				margin-left:4px;
+				line-height: 4px;				
+				margin-left:0px;
 				width: 165px;
+				padding: 10px;
 			}
 
 			.graphNumber {
