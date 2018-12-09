@@ -685,7 +685,8 @@ function getSkewerSpectra(){
 	fluxes = [];
 	//console.log[k]
 	for(i =0;i<k.length;i++){
-		if(k[i].key == "HI" || k[i].key == "CIV"){
+		//if(k[i].key == "HI" || k[i].key == "CIV"){
+		if(k[i].key == "HI"){
 			let k_spec = k[i].value
 			//console.log(k_spec)
 			for(j=0;j<k_spec.length;j++){
@@ -778,11 +779,22 @@ function EW_plot(){
 	svg.append("g")
 		.attr("class","xAxis")
 		.call(xAxis);
+	svg.append("text")
+		.text("Impact Parameter (Mpc)")
+		.style("fill","white")
+		.attr("font-size","10px")
+		.attr("transform","translate(34,-1)")
 	svg.append("g")
 		.attr("class","yAxis")
 		.call(yAxis)
 		.attr('transform','translate(0,-170)')
-
+	svg.append("text")
+		.text("Equivalent Width (Å)")
+		.attr('transform','rotate(-90)')
+		.attr("y", 11)
+		.attr("x", 70)
+		.style("fill", "white")
+		.attr("font-size","10px")
 	
 	//add error line
 	svg.append("g").selectAll("line")
@@ -790,23 +802,16 @@ function EW_plot(){
 		.append("line")
 		.attr("class", "error-line")
 		.attr("x1", function(d) {
-			console.log(d.ip)
-			console.log(xScale(d.ip))
 			return xScale(d.ip);
 		})
 		.attr("y1", function(d) {
 			if(d.ew < 3*d.sigEWf){
-				//let ew = 3*sigEWf
-				//return yScale(ew + d.sigEWf)-170;
-				return 0
+				let ew = 3*d.sigEWf
+				return yScale(ew-0.1)-170;
 			}
 			else{
 				return yScale(d.ew + d.sigEWf)-170;
 			}
-			/*console.log(d.ew)
-			console.log(d.sigEWf)
-			console.log(yScale(d.ew + d.sigEWf))*/
-			
 		})
 		.attr("x2", function(d) {
 			return xScale(d.ip);
@@ -814,7 +819,8 @@ function EW_plot(){
 		.attr("y2", function(d) {
 			if(d.ew < 3* d.sigEWf){
 				let ew = 3*d.sigEWf
-				return yScale(ew - d.sigEWf)-170;
+				//return yScale(d.ew - ew)-170;
+				return yScale(ew)-170;
 			}
 			else{
 				return yScale(d.ew - d.sigEWf)-170;
@@ -830,25 +836,30 @@ function EW_plot(){
 		.append("line")
 		.attr("class", "error-cap")
 		.attr("x1", function(d) {
-			return xScale(d.ip) - 4;
+			if(d.ew < 3*d.sigEWf){
+			}
+			else{
+				return xScale(d.ip) - 4;
+			}
 		})
 		.attr("y1", function(d) {
 			if(d.ew < 3*d.sigEWf){
-				//let ew = 3*sigEWf
-				//return yScale(ew + d.sigEWf)-170;
-				return 0
 			}
 			else{
 				return yScale(d.ew + d.sigEWf)-170;
 			}
 		})
 		.attr("x2", function(d) {
-			return xScale(d.ip) + 4;
+			if(d.ew < 3*d.sigEWf){
+			}
+			else{
+				return xScale(d.ip) + 4;
+			}
 		})
 		.attr("y2", function(d) {
 			if(d.ew < 3* d.sigEWf){
-				let ew = 3*d.sigEWf
-				yScale(ew + d.sigEWf)-170;
+				//let ew = 3*d.sigEWf
+				//yScale(ew + d.sigEWf)-170;
 			}
 			else{
 				return yScale(d.ew + d.sigEWf)-170;
@@ -867,19 +878,67 @@ function EW_plot(){
 			return xScale(d.ip) - 4;
 		})
 		.attr("y1", function(d) {
-			return yScale(d.ew - d.sigEWf)-170;
+			if(d.ew < 3* d.sigEWf){
+				let ew = 3*d.sigEWf
+				return yScale(ew - 0.1)-174;
+			}
+			else{
+				return yScale(d.ew - d.sigEWf)-170;
+			}
 		})
 		.attr("x2", function(d) {
-			return xScale(d.ip) + 4;
+			if(d.ew < 3* d.sigEWf){
+				return xScale(d.ip);
+			}
+			else{
+				return xScale(d.ip) + 4;
+			}
 		})
 		.attr("y2", function(d) {
-			return yScale(d.ew - d.sigEWf)-170;
+			if(d.ew < 3* d.sigEWf){
+				let ew = 3*d.sigEWf
+				return yScale(ew - 0.1)-170;
+			}
+			else{
+				return yScale(d.ew - d.sigEWf)-170;
+			}
 		})
 		.attr('stroke',function(d){
 			return d.color
 		})
 			//console.log(neighbors)
 			// setup x 
+	
+	svg.append("g").selectAll("line")
+		.data(neighbors).enter()
+		.append("line")
+		.attr("class", "error-cap")
+		.attr("x1", function(d) {
+			if(d.ew < 3* d.sigEWf){
+				return xScale(d.ip);
+			}
+		})
+		.attr("y1", function(d) {
+			if(d.ew < 3* d.sigEWf){
+				let ew = 3*d.sigEWf
+				return yScale(ew - 0.1)-170;
+			}
+		})
+		.attr("x2", function(d) {
+			if(d.ew < 3* d.sigEWf){
+				return xScale(d.ip) + 4;
+			}
+		})
+		.attr("y2", function(d) {
+			if(d.ew < 3* d.sigEWf){
+				let ew = 3*d.sigEWf
+				return yScale(ew - 0.1)-174;
+			}
+		})
+		.attr('stroke',function(d){
+			return d.color
+		})
+	
 	svg.selectAll(".dot")
         .data(neighbors)
 		.enter().append("circle")
@@ -889,7 +948,10 @@ function EW_plot(){
             return xScale(d.ip);
 		})
         .attr("cy", function(d) {
-            return yScale(d.ew)-170;
+			if(d.ew < 3* d.sigEWf){
+				return yScale(3*d.sigEWf)-170;
+			}
+            else return yScale(d.ew)-170;
 		})
 		.attr('fill',function(d){
 			return d.color
@@ -900,25 +962,17 @@ function EW_plot(){
 				 .style("opacity", 0.75);
 			tooltip.html("QSO: " + d.skewer + "<br/> NSAID: " + d.NSAID + "<br/> IP: " + d.ip + " Mpc <br/> EW: " + roundtofive(d.ew) + " Å <br/> zmin: " + d.zmin + "<br/> zmax: " + d.zmax + "<br/> zabs: " + d.zabs + "<br/> velmin: " + d.velmin + " km/s <br/> velmax: " + d.velmax + "km/s")
 				 .style("left", (d3.event.pageX - 25) + "px")
-				 .style("top", (d3.event.pageY - 150) + "px");
+				 .style("top", (d3.event.pageY - 150) + "px")
+			var g = galaxies[d.gidx]
+			currentGalaxy = [g,d.gidx];
 			plotGalaxyImage(d.gidx)
+			plotSkewerNeighbors();
 		})
 		.on("mouseout", function(d) {
 			tooltip.transition()
 				 .duration(200)
 				 .style("opacity", 0);
 		});
-		
-		
-
-/*
-	var xValue = function(d) { return d.ip}, // data -> value
-	xMap = function(d) { return xScale(xValue(d));} // data -> display
-
-	// setup y
-	var yValue = function(d) { return d.ew;}, // data -> value
-	yMap = function(d) { return yScale(yValue(d));} // data -> display*/
-
 }
 
 function filterNeighborsEW(EW,z_min,z_max,skewerName,err){
@@ -1332,16 +1386,19 @@ function plotSkewerSpectra() {
 					//.curve(d3.curveCardinal);
 				spectra.forEach((u) => {
 					graph.selectAll('.pen' + u.key).remove()
+					graph.selectAll('.pen' + u.key + 'invis').remove()
 					graph.selectAll('#border').remove()
 					if(u.key == "HI" || u.key == "CIV"){
 						var path = graph.append('path')
 							.attr('class', 'pen' + u.key)
 							.datum(u.value)
 							.attr('d', pen )
-							//.attr('stroke', u.key == 'HI' ? '#f4eaff' : '#ffd6ce' )
-							//.attr('stroke', u.key == 'HI' ? '#9aeab9' : '#9aeab9' )
 							.attr('fill', 'none')
-							//.on('mousedown'){}
+						var path = graph.append('path')
+							.attr('class', 'pen' + u.key + 'invis')
+							.datum(u.value)
+							.attr('d', pen )
+							.attr('fill', 'none')
 							.on('click', function() {
 								var x0 = x.invert(d3.mouse(this)[0]),
 								y0 = y.invert(d3.mouse(this)[1])
@@ -1352,7 +1409,7 @@ function plotSkewerSpectra() {
 								//console.log(x0,y0,i,d0,d1)
 								
 								//d = x0 - d0.date > d1.date - x0 ? d1 : d0;
-								if(E_pressed){
+								if(E_pressed && u.key == "HI"){
 									EW_selected = [skewer[skewIdx],spectra]
 									console.log(EW_selected)
 									console.log(x0,y0)
@@ -1401,8 +1458,10 @@ function plotSkewerSpectra() {
 						}
 						else if(k==2){
 							d3.select('#details').select('#graph' + w).selectAll('g').selectAll('.yaxis').remove();
-							graph.selectAll('.penHI').attr("transform","translate(0," + graphHeight/4 + ")")
-							graph.selectAll('.penCIV').attr("transform","translate(0," + (-1)*graphHeight/4 + ")")
+							graph.selectAll('.penHI').attr("transform","translate(0," + graphHeight/8 + ")")
+							graph.selectAll('.penHIinvis').attr("transform","translate(0," + graphHeight/8 + ")")
+							graph.selectAll('.penCIV').attr("transform","translate(0," + (-1)*graphHeight/6 + ")")
+							graph.selectAll('.penCIVinvis').attr("transform","translate(0," + (-1)*graphHeight/6 + ")")
 								graph.append('g').attr('class', 'yaxis')
 									.attr('stroke', 'white')
 									.append('text')
@@ -1517,18 +1576,11 @@ function plotSkewerNeighbors() {
 							if(currentGalaxy[1] && currentGalaxy[1] == (j)){
 								return('#ffaaaa')
 							}
-							if(selectedGalaxies.includes(j)){
+							else if(selectedGalaxies.includes(j)){
 								return('#5e5eff')
 							}
 						})
-						/*.on('mouseover', (j) => {
-							pointOverIdx = j
-							selectPoint()
-							plotSkewerSpectra()
-							plotGalaxyImage()
-						})*/
 						.on('mouseover', (j) => {
-							
 							pointOverIdx = j //;
 							selectPoint()
 							//plotSkewerSpectra()
@@ -1586,6 +1638,7 @@ function plotGalaxyImage(idx){
 			.on('mouseover', (j) => {			
 				pointOverIdx = idx //;
 				selectPoint()
+				plotSkewerNeighbors()
 			})
 			.on('mouseout', (j) =>{
 				prevPointOverIdx = idx
@@ -1605,7 +1658,6 @@ function plotGalaxyImage(idx){
 			.on('mouseover', (j) => {
 				pointOverIdx = j //;
 				selectPoint()
-				
 			})
 			.on('mouseout', (j) =>{
 				prevPointOverIdx = j
@@ -1626,6 +1678,9 @@ function plotGalaxyImage(idx){
 		svg.selectAll('img')
 			.on('mouseover', (j) => {
 				pointOverIdx = idx //;
+				let m = galaxies[idx]
+				currentGalaxy = [m,idx];
+				plotSkewerNeighbors()
 				selectPoint()
 			})
 			.on('mouseout', (j) =>{
