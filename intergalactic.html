@@ -149,7 +149,7 @@
 			}
 			#graphs {
 				overflow-y: scroll;
-				height: calc(100vh - 202px);
+				height: calc(100vh - 205px);
 				border-style: solid;
 				border-width: 1px 1px 1px 1px;
 				border-color: #868686;
@@ -228,7 +228,12 @@
 			}
 
 			#imageSaveInstructions{
-				transform: translate(10vw,75px);
+				text-align: center;
+				position: absolute;
+				left: 20px;
+				right: 20px;
+				transform: translateY(75px);
+				
 			}
 
 			.dg ac{
@@ -246,10 +251,16 @@
 				right: 33.3%;
 				fill:white;
 			}
-			
-			.dot{
+
+			.EW-status{
+				text-align: right;
+				width: 200px;
+				display:block;
 				fill: black;
+				transform: translateY(25px)
 			}
+			
+			
 			.tooltip {
 				position: absolute;
 				width: auto;
@@ -257,6 +268,13 @@
 				background-color: black;
 				pointer-events: none;
 				text-align: left;
+			}
+			.error-line {
+				stroke-dasharray: 2, 2;
+			}
+
+			.error-cap {
+				stroke-width: 1px;
 			}
 		
 
@@ -289,9 +307,10 @@
 		<div id="bottom-panel">
 			<div id="galaxyImage"></div>
 			<div id="galaxyDesc"></div>
-			<div id="selectedGalaxies"></div>
+			<div id="selectedGalaxies">
+				<p id="imageSaveInstructions">Press 'G' to save selected galaxy</p>
+			</div>
 			<div id="EW-plot"></div>
-			<p id="imageSaveInstructions">Press 'G' to save selected galaxy</p>
 		</div>
 		
 
