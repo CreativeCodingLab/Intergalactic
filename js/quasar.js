@@ -732,13 +732,13 @@ function EW_plot_init(){
 		.attr("width", 200)
 		.attr("height", 200)
 		.attr("transform", "translate(" + (window.innerWidth-columnWidth - 200) + ",0)")
-		.style('fill', '#868686')
+		.style('fill', '#1d1d1d')
 	ret.append('rect')
 			.attr('x',0)
 			.attr('y',0)
 			.attr('width', 200)
 			.attr('height', 200)
-			.attr('fill', '#868686')
+			.attr('fill', '#1d1d1d')
 	EW_plot()
 	/*d3.select('#bottom-panel').selectAll('#EW-plot').append('p')
 		.attr('id','EWplotInstructions')
@@ -1511,14 +1511,14 @@ function plotSkewerNeighbors() {
 						.attr('height', 2*halfSize)
 						//.attr('fill', '#ffff00')
 						//.attr('opacity', 1 / (30*dist + 1))
-						.attr('opacity', .7)
+						.attr('opacity', .85)
 						.datum(j)
 						.style('fill', (j) => {
 							if(currentGalaxy[1] && currentGalaxy[1] == (j)){
-								return('#ffaaaa')	// red
+								return('#00ff00')	// green
 							}
 							if(selectedGalaxies.includes(j)){
-								return('#5e5eff')	// blue
+								return('#0000ff')	// blue
 							}
 						})
 						/*.on('mouseover', (j) => {
