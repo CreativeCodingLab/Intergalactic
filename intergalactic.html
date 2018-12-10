@@ -140,10 +140,17 @@
 			.penHI {
 				stroke: #c9c9c9;
 				stroke-opacity: 80%;
+				stroke-width: 1px;
+			}
+			.penHIinvis {
+				stroke: black;
+				opacity: 0;
+				stroke-width: 3px;
 			}
 			.penCIV {
 				stroke: #c9c9c9;
 				stroke-opacity: 80%;
+				stroke-width: 1px;
 			}
 
 			#border {
@@ -181,7 +188,6 @@
 				border-width: 0px 1px 0px 0px;
 				border-color: #868686; */
 				padding: 20px;
-				
 			}
 			.galaxyQueue-Desc{
 				display: inline-block;
@@ -248,24 +254,26 @@
 			}
 			
 			#EW-plot{
-				width: 200px;
+				width: 210px;
 				right: 33.3%;
 				fill:white;
 			}
 			#EWplot{
-				width: 200px;
+				width: 210px;
 				right: 33.3%;
 				fill:white;
 			}
 
 			.EW-status{
-				text-align: right;
-				width: 200px;
-				display:block;
-				fill: black;
-				transform: translateY(25px)
+				text-align: center;
+				position: absolute;
+				width: 100px;
+				left: 20px;
+				right: 20px;
+				fill: white;
+				transform: translate(75px,25px);
+				font-size: 10px;
 			}
-			
 			
 			.tooltip {
 				position: absolute;
@@ -276,7 +284,7 @@
 				text-align: left;
 			}
 			.error-line {
-				stroke-dasharray: 2, 2;
+				stroke-width: 1;
 			}
 
 			.error-cap {
