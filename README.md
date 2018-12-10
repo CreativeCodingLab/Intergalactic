@@ -23,7 +23,9 @@ If you find interesting galaxy/absorber pairs, use the numeric keys and 'G' to k
 ## Keystrokes Quick Reference<br/>
 arrow keys: move reference point<br/>
 0 - 9 : store selected skewer<br/>
+E : obtain equivalent width measurements<br/>
 G : store selected galaxy<br/>
 D : download json file of all stored skewers with galaxy neighbor pairs<br/>
 S : show / hide skewers in 3D view  <br/>
 T : show / hide text in 3D view  <br/>
+Z : zoom camera to selected galaxy <br/>
