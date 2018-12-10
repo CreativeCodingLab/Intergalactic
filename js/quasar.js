@@ -45,8 +45,8 @@ var optionFile = 'options.txt';
 // mutable params
 var galaxyFile, skewerFile;
 var galaxyRvirScalar = 1;
-var galaxyRedHSL = "hsl(0, 90%, 50%)";
-var galaxyBlueHSL = "hsl(200, 70%, 50%)";
+var galaxyRedHSL = "hsl(0, 90%, 90%)";
+var galaxyBlueHSL = "hsl(200, 70%, 90%)";
 var skewerAbsorptionMinHSL = "hsl(100, 90%, 50%)";
 var skewerAbsorptionMaxHSL = "hsl(280, 90%, 60%)";
 var showLabels = true;
@@ -732,13 +732,13 @@ function EW_plot_init(){
 		.attr("width", 200)
 		.attr("height", 200)
 		.attr("transform", "translate(" + (window.innerWidth-columnWidth - 200) + ",0)")
-		.style('fill', '#868686')
+		.style('fill', '#d8d8d8')
 	ret.append('rect')
 			.attr('x',0)
 			.attr('y',0)
 			.attr('width', 200)
 			.attr('height', 200)
-			.attr('fill', '#868686')
+			.attr('fill', '#d8d8d8')
 	EW_plot()
 	/*d3.select('#bottom-panel').selectAll('#EW-plot').append('p')
 		.attr('id','EWplotInstructions')
@@ -1392,7 +1392,7 @@ function plotSkewerSpectra() {
 					let k = spectra.length - 4
 						if(k==1 && (u.key == 'HI' || u.key == 'CIV')){
 							graph.append('g').attr('class', 'yaxis')
-								.attr('stroke', 'white')
+								.attr('stroke', 'black')
 								//.call(d3.axisLeft(y))
 								.append('text')
 								.attr("transform", "translate(-10," + graphHeight/2 + ") rotate(-90)")
@@ -1404,13 +1404,13 @@ function plotSkewerSpectra() {
 							graph.selectAll('.penHI').attr("transform","translate(0," + graphHeight/4 + ")")
 							graph.selectAll('.penCIV').attr("transform","translate(0," + (-1)*graphHeight/4 + ")")
 								graph.append('g').attr('class', 'yaxis')
-									.attr('stroke', 'white')
+									.attr('stroke', 'black')
 									.append('text')
 									.attr("transform", "translate(-10," + 3*graphHeight/4 + ") rotate(-90)")
-				 		     		.style("text-anchor", "middle")
+				 		     		.style("text-anchor", "black")
 									.text('HI');
 								graph.append('g').attr('class', 'yaxis')
-									.attr('stroke', 'white')
+									.attr('stroke', 'black')
 									.append('text')
 									.attr("transform", "translate(-10," + graphHeight/4 + ") rotate(-90)")
 				      				.style("text-anchor", "middle")
@@ -1418,21 +1418,21 @@ function plotSkewerSpectra() {
 							}
 						d3.selectAll('text')
 							.attr('stroke', 'none')
-							.attr('fill', 'white');
+							.attr('fill', 'black');
 					})
 			}
 			graph.append('g').attr('class', 'xaxis')
 				.attr('transform', 'translate(0,'+graphHeight+')')
-				.attr('stroke', 'white')
+				.attr('stroke', 'black')
 				.call(d3.axisBottom(x).ticks(6)) // relX
 				.selectAll('text')
 					.attr('stroke', 'none')
-					.attr('fill', 'white');
+					.attr('fill', 'black');
 
 			graph.append('text').attr('class','title')
 				.attr('transform', 'translate('+(columnWidth-50)/2+', -7)')
 				.attr('text-anchor', 'middle')
-				.attr('fill', 'white')
+				.attr('fill', 'black')
 				.text(k);
 	}
 	plotSkewerNeighbors();
@@ -1511,14 +1511,14 @@ function plotSkewerNeighbors() {
 						.attr('height', 2*halfSize)
 						//.attr('fill', '#ffff00')
 						//.attr('opacity', 1 / (30*dist + 1))
-						.attr('opacity', .7)
+						.attr('opacity', .85)
 						.datum(j)
 						.style('fill', (j) => {
 							if(currentGalaxy[1] && currentGalaxy[1] == (j)){
-								return('#ffaaaa')	// red
+								return('#00ff00')	// green
 							}
 							if(selectedGalaxies.includes(j)){
-								return('#5e5eff')	// blue
+								return('#0000ff')	// blue
 							}
 						})
 						/*.on('mouseover', (j) => {
@@ -1575,8 +1575,9 @@ function plotGalaxyImage(idx){
 		galaxyDesc.selectAll('p')
 			.data(lines)
 			.enter()
-				.append('p')
-				.text(d => d)
+			.append('p')
+			.style('color', 'black')
+			.text(d => d)
 	
 		var galaxyImage = svg.append('div')
 		galaxyImage.append('img')
@@ -1623,6 +1624,7 @@ function plotGalaxyImage(idx){
 			.enter()
 			.append('p')
 			.style('width','150px')
+			.style('color', 'black')
 			.text(d => d)
 		svg.selectAll('img')
 			.on('mouseover', (j) => {
@@ -1889,7 +1891,8 @@ function processGalaxyData(data) {
 		vertexShader:   document.getElementById( 'vertexshader' ).textContent,
 		fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
 
-		blending:       THREE.AdditiveBlending,
+		blending:       THREE.CustomBlending,
+		blendEquation:	THREE.ReverseSubtractEquation,
 		depthTest:      false,
 		transparent:    true,
 
@@ -2058,9 +2061,9 @@ function plotSkewer(name, RA, DEC){
 				textAlign: 'left',
 			},
 			material: {
-				color: 0xffffff,
+				color: 0x000000,
 				fog: false,
-				transparent: true,
+				transparent: false,
 				opacity: 0.9,
 			},
 		});
@@ -2088,7 +2091,7 @@ function init() {
 
 	scene = new THREE.Scene();
 	//scene.fog = new THREE.FogExp2( 0xcccccc, 0.02 );
-	scene.background = new THREE.Color( 0x050505 );
+	scene.background = new THREE.Color( 0xffffff );
 
 	cylinderGroup = new THREE.Group();
 	cylinderBackGroup = new THREE.Group();
