@@ -677,6 +677,7 @@ function selectZ(){
 	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('center point selected')
 	getSkewerSpectra();
 	d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
+	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('Press "E" to start')	
 }
 
 function getSkewerSpectra(){
@@ -730,16 +731,21 @@ function EW_plot_init(){
 	d3.select('#bottom-panel').selectAll('#EW-plot').select('#EWplot').remove()
 	let ret = d3.select('#bottom-panel').selectAll('#EW-plot').append('svg')
 		.attr('id','EWplot')
-		.attr("width", 200)
+		.attr("width", 210)
 		.attr("height", 200)
-		.attr("transform", "translate(" + (window.innerWidth-columnWidth - 200) + ",0)")
+		.attr("transform", "translate(" + (window.innerWidth-columnWidth - 210) + ",0)")
 		.style('fill', '#868686')
 	ret.append('rect')
 			.attr('x',0)
 			.attr('y',0)
-			.attr('width', 200)
+			.attr('width', 210)
 			.attr('height', 200)
 			.attr('fill', '#868686')
+	if(EW_stat == 0){
+		d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
+		d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('Press "E" to start')
+	}		
+		
 	EW_plot()
 	/*d3.select('#bottom-panel').selectAll('#EW-plot').append('p')
 		.attr('id','EWplotInstructions')
@@ -763,10 +769,10 @@ function EW_plot(){
 		.range([0,155])
 	var yScale = d3.scaleLinear()
 		.domain([1,0])
-		.range([0,170])
+		.range([0,155])
 	var svg = d3.select("body").select('#bottom-panel').select('#EW-plot').select('#EWplot').append('svg')
 		.append("g")
-		.attr('transform','translate(30,180)')
+		.attr('transform','translate(45,180)')
 	var tooltip = d3.select("body").append("div")
 		.attr("class", "tooltip")
 		.style("opacity", 0);
@@ -778,12 +784,13 @@ function EW_plot(){
 		.scale(yScale)
 	svg.append("g")
 		.attr("class","xAxis")
+		.attr("transform","translate(0,-15)")
 		.call(xAxis);
 	svg.append("text")
 		.text("Impact Parameter (Mpc)")
 		.style("fill","white")
 		.attr("font-size","10px")
-		.attr("transform","translate(34,-1)")
+		.attr("transform","translate(8,16)")
 	svg.append("g")
 		.attr("class","yAxis")
 		.call(yAxis)
@@ -791,8 +798,8 @@ function EW_plot(){
 	svg.append("text")
 		.text("Equivalent Width (Å)")
 		.attr('transform','rotate(-90)')
-		.attr("y", 11)
-		.attr("x", 70)
+		.attr("y", -33)
+		.attr("x", 30)
 		.style("fill", "white")
 		.attr("font-size","10px")
 	
@@ -1428,7 +1435,6 @@ function plotSkewerSpectra() {
 										EW_stat = 0;
 										E_pressed = false;
 										selectZ();
-										
 									}
 								}
 								
