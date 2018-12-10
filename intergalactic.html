@@ -4,10 +4,11 @@
 		<title>IGM-VIZ</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">
 		<style>
 			body {
 				color: #ffffff;
-				font-family:Verdana;
+				font-family:'Roboto Mono', Verdana;
 				font-size:13px;
 				text-align:center;
 				/* font-weight: bold; */
@@ -58,7 +59,7 @@
 
 			#bottom-panel {
 				background-color: #1d1d1d;
-				height: 202px;
+				height: 203px;
 				width: 66.6%;
 				left: 0;
 				bottom: 0;
@@ -68,6 +69,8 @@
 				border-style: solid;
 				border-width: 1px 0px 1px 1px;
 				border-color: #868686;
+				border-bottom: none;
+				border-left: none;
 			}
 
 			#galaxyImage{
@@ -104,7 +107,7 @@
 				bottom: 0px;
 				overflow-x: scroll;
 				left: 355px;
-				right: calc(33.3% + 200px);
+				right: calc(33.3% + 220px);
 				height: 202px;
 				/*bottom: -1px;*/
 				padding-left: 10px;
@@ -112,15 +115,21 @@
 				border-style: solid;
 				border-width: 1px 1px 1px 1px;
 				border-color: #868686;
+				border-top: none;
+				border-bottom: none;
 			}
 
 			.tick text{
 				fill:white;
-				font-family:Verdana;
+				font-family: 'Roboto Mono';
 			}
 
-			.tick{
-				fill:white;
+			.tick {
+				fill:#b1b1b1;
+			}
+
+			.tick line {
+				stroke: #b1b1b1;
 			}
 
 			#depth-brush text{
@@ -134,12 +143,11 @@
 
 			.xaxis text{
 				font-size: 13px;
-				font-family:Verdana;
+				font-family: 'Roboto Mono', Verdana;
 			}
 
 			.penHI {
-				stroke: #c9c9c9;
-				stroke-opacity: 80%;
+				stroke: #858585;
 				stroke-width: 1px;
 			}
 			.penHIinvis {
@@ -148,8 +156,7 @@
 				stroke-width: 3px;
 			}
 			.penCIV {
-				stroke: #c9c9c9;
-				stroke-opacity: 80%;
+				stroke: #858585;
 				stroke-width: 1px;
 			}
 
@@ -162,13 +169,20 @@
 			#graphs {
 				overflow-y: scroll;
 				height: calc(100vh - 205px);
-				border-style: solid;
+				/* border-style: solid;
 				border-width: 1px 1px 1px 1px;
-				border-color: #868686;
+				border-color: #868686; */
 				
 			}
+
+			.domain {
+				stroke: #b1b1b1;
+			}
 			#selector{
-				margin-top:15px;
+				/* margin-top:15px; */
+				padding-top: 20px;
+				border-top: 1px solid #868686;
+				
 			}
 
 			#selectedGalaxies{
@@ -180,8 +194,8 @@
 				opacity: 1;
 			}
 			.mark{ 
-				fill: #ff0000;
-				opacity: 0.85; 
+				fill: #ffffff;
+				opacity: 0.75; 
 			}
 			.galaxyQueue{
 				/* border-style: solid;
@@ -254,13 +268,14 @@
 			}
 			
 			#EW-plot{
-				width: 210px;
-				right: 33.3%;
+				position: absolute;
+				width: 208px;
+				right: 2px;
 				fill:white;
 			}
 			#EWplot{
-				width: 210px;
-				right: 33.3%;
+				width: 208px;
+				/* position: inherit; */
 				fill:white;
 			}
 

@@ -8,7 +8,6 @@
 								p = closestPoint(pathNode.node(), m);
 								console.log(p)
 								*/
-
 var z_d = loadLookUp()
 var EW_coord = []; //redshift + flux
 var EW_all = []
@@ -732,14 +731,14 @@ function EW_plot_init(){
 	let ret = d3.select('#bottom-panel').selectAll('#EW-plot').append('svg')
 		.attr('id','EWplot')
 
-		.attr("width", 210)
+		.attr("width", 208)
 		.attr("height", 200)
-		.attr("transform", "translate(" + (window.innerWidth-columnWidth - 210) + ",0)")
+		//.attr("transform", "translate(" + (window.innerWidth-columnWidth - 210) + ",0)")
 		.style('fill', '#1d1d1d')
 	ret.append('rect')
 			.attr('x',0)
 			.attr('y',0)
-			.attr('width', 210)
+			.attr('width', 208)
 			.attr('height', 200)
 			.attr('fill', '#1d1d1d')
 	if(EW_stat == 0){
@@ -783,6 +782,7 @@ function EW_plot(){
 	// Y-axis
 	var yAxis = d3.axisLeft()
 		.scale(yScale)
+		.ticks(5)
 	svg.append("g")
 		.attr("class","xAxis")
 		.attr("transform","translate(0,-15)")
@@ -1473,7 +1473,7 @@ function plotSkewerSpectra() {
 									.attr('stroke', 'white')
 									.append('text')
 									.attr("transform", "translate(-10," + 3*graphHeight/4 + ") rotate(-90)")
-				 		     		.style("text-anchor", "middle")
+									.style("text-anchor", "middle")
 									.text('HI');
 								graph.append('g').attr('class', 'yaxis')
 									.attr('stroke', 'white')
@@ -1581,10 +1581,14 @@ function plotSkewerNeighbors() {
 						.datum(j)
 						.style('fill', (j) => {
 							if(currentGalaxy[1] && currentGalaxy[1] == (j)){
-								return('#00ff00')	// green
+								return('#00ff00')	//  green
 							}
 							if(selectedGalaxies.includes(j)){
-								return('#0000ff')	// blue
+								if (galaxies[j].color == 'blue') {
+									return ('#00aeff')	// blue
+								} else {
+									return('#ff0000')	// red
+								}
 							}
 						})
 						.on('mouseover', (j) => {
