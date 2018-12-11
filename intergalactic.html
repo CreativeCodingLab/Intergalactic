@@ -4,11 +4,16 @@
 		<title>IGM-VIZ</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link href="https://fonts.googleapis.com/css?family=Karla" rel="stylesheet">	
+		<link rel="icon" 
+			type="image/png" 
+			href="data/galaxyImages/633807.jpg">
+		
 		<style>
 			body {
 				color: #ffffff;
-				font-family:Verdana;
-				font-size:13px;
+				font-family:'Karla', Verdana;
+				font-size:14px;
 				text-align:center;
 				/* font-weight: bold; */
 				background-color: #000000;
@@ -58,7 +63,7 @@
 
 			#bottom-panel {
 				background-color: #1d1d1d;
-				height: 202px;
+				height: 203px;
 				width: 66.6%;
 				left: 0;
 				bottom: 0;
@@ -68,30 +73,36 @@
 				border-style: solid;
 				border-width: 1px 0px 1px 1px;
 				border-color: #868686;
+				border-bottom: none;
+				border-left: none;
 			}
 
 			#galaxyImage{
 				background-color: #000000;
 				/*height:16.5vw;
 				width: 16.5vw;*/
-				height: 200px;
-				width: 200px;
+				height: 160px;
+				width: 160px;
 				position: absolute;
-  				bottom: 1px;
-  				left: 195px;
+				top: 20px;
+  				bottom: 20px;
+  				left: 155px;
 				float:left;
+				border-style: solid;
+				border-width: 1px 1px 1px 1px;
+				border-color: #2d2d2d;
 
 			}
 			#galaxyDesc {
 				display: block;
 				position: fixed;
 				float: left;
-				bottom: 15px;
+				bottom: 20px;
   				left: 15px;
 				font-size: 13px;
 				text-align: left;
 				line-height: 4px;
-				
+				overflow-wrap: break-word;
 			}
 
 			#selectedGalaxies {
@@ -101,23 +112,30 @@
 				float: left;
 				bottom: 0px;
 				overflow-x: scroll;
-				left: 395px;
-				right: calc(33.3% + 200px);
+				left: 355px;
+				right: calc(33.3% + 220px);
 				height: 202px;
 				/*bottom: -1px;*/
-				padding-left: 1px;
+				padding-left: 10px;
+				padding-right: 10px;
 				border-style: solid;
 				border-width: 1px 1px 1px 1px;
 				border-color: #868686;
+				border-top: none;
+				border-bottom: none;
 			}
 
 			.tick text{
 				fill:white;
-				font-family:Verdana;
+				font-family: 'Karla';
 			}
 
-			.tick{
-				fill:white;
+			.tick {
+				fill:#b1b1b1;
+			}
+
+			.tick line {
+				stroke: #b1b1b1;
 			}
 
 			#depth-brush text{
@@ -131,11 +149,11 @@
 
 			.xaxis text{
 				font-size: 13px;
-				font-family:Verdana;
+				font-family: 'Karla', Verdana;
 			}
 
 			.penHI {
-				stroke: #1c1d23;
+				stroke: #858585;
 				stroke-width: 1px;
 			}
 			.penHIinvis {
@@ -144,7 +162,7 @@
 				stroke-width: 3px;
 			}
 			.penCIV {
-				stroke: #1c1d23;
+				stroke: #858585;
 				stroke-width: 1px;
 			}
 
@@ -157,13 +175,20 @@
 			#graphs {
 				overflow-y: scroll;
 				height: calc(100vh - 205px);
-				border-style: solid;
+				/* border-style: solid;
 				border-width: 1px 1px 1px 1px;
-				border-color: #868686;
+				border-color: #868686; */
 				
 			}
+
+			.domain {
+				stroke: #b1b1b1;
+			}
 			#selector{
-				margin-top:15px;
+				/* margin-top:15px; */
+				padding-top: 20px;
+				border-top: 1px solid #868686;
+				
 			}
 
 			#selectedGalaxies{
@@ -171,7 +196,7 @@
 			}
 
 			.graph-background {
-				fill: #868686;
+				fill: #232323;
 				opacity: 1;
 			}
 			.mark{ 
@@ -179,19 +204,24 @@
 				opacity: 0.75; 
 			}
 			.galaxyQueue{
+				padding: 20px;
+			}
+			.galaxyQueue img{
 				border-style: solid;
-				border-width: 0px 1px 0px 0px;
-				border-color: #868686;
-				
-				
+				border-width: 1px 1px 1px 1px;
+				border-color: #2d2d2d;
 			}
 			.galaxyQueue-Desc{
 				display: inline-block;
 				font-size: 13px;
 				text-align: left;
-				line-height: 8px;
-				margin-left:4px;
+				line-height: 4px;				
+				margin-left:0px;
 				width: 165px;
+				padding: 10px;
+				border-style: solid;
+				border-width: 0px 1px 0px 0px;
+				border-color: #2d2d2d;
 			}
 
 			.graphNumber {
@@ -249,13 +279,14 @@
 			}
 			
 			#EW-plot{
-				width: 210px;
-				right: 33.3%;
+				position: absolute;
+				width: 208px;
+				right: 2px;
 				fill:white;
 			}
 			#EWplot{
-				width: 210px;
-				right: 33.3%;
+				width: 208px;
+				/* position: inherit; */
 				fill:white;
 			}
 
@@ -266,8 +297,8 @@
 				left: 20px;
 				right: 20px;
 				fill: white;
-				transform: translate(75px,25px);
-				font-size: 10px;
+				transform: translate(45px,15px);
+				font-size: 12px;
 			}
 			
 			.tooltip {
@@ -467,7 +498,7 @@
 				}
 				if (vSelect > 0.9 && vSelect < 1.1){
 					//gl_FragColor *= 1.5;
-					gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+					gl_FragColor = vec4(1.0, 1.0, 0.0, 0.2);
 				}
 			}
 

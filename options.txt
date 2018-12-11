@@ -1,12 +1,12 @@
 galaxyData=data/galaxiesInSdssSlice_viz.dat
 galaxyRvirScalar=1
-galaxyRedHSL=hsl(0, 100%, 50%)
-galaxyBlueHSL=hsl(200, 100%, 50%)
+galaxyRedHSL=hsl(7, 100%, 22%)
+galaxyBlueHSL=hsl(212, 100%, 18%)
 projectionData=data/projections/projections.json
 skewerData=data/qsosInSdssSlice_viz.dat
 skewerWidth=0.125
-skewerAbsorptionMinHSL=hsl(275, 70%, 60%)
-skewerAbsorptionMaxHSL=hsl(200, 70%, 55%)
+skewerAbsorptionMinHSL=hsl(0, 0%, 0%)
+skewerAbsorptionMaxHSL=hsl(0, 0%, 0%)
 skewerLinearFiltering=false
 boxRadius=50
 showLabels=true

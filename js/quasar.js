@@ -8,7 +8,6 @@
 								p = closestPoint(pathNode.node(), m);
 								console.log(p)
 								*/
-
 var z_d = loadLookUp()
 var EW_coord = []; //redshift + flux
 var EW_all = []
@@ -334,7 +333,6 @@ function roundtofive(s, round = true) {
 	return round ? Math.round(100000 * v) / 100000.0 : v
 }
 
-
 function loadSkewerData(callback) {
 
 	//let f = roundtothree
@@ -473,7 +471,7 @@ function veltrans(redshift,waves,line){
 			transline.push(c*(waves[ll]-(1+redshift[ll])*ll)/ll/(1+redshift[ll]))
 		}
 	}
-	console.log(transline)
+	//console.log(transline)
 	return transline 
 }
 
@@ -525,32 +523,32 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 			cont.push(1)
 		}
 	}
-	console.log("cont: " + cont)
+	//console.log("cont: " + cont)
     //### Transform to velocity space
 	let vel=veltrans(zabs,wave,restlam)
-	console.log('vel: ' + vel)
+	//console.log('vel: ' + vel)
 	let velidx = [];
 	
 	v[0] = wave[0] 
 	v[1] = wave[wave.length-1]
 	vellim = veltrans(zabs,v,restlam)
-	console.log(v)
-	console.log(vellim)
+	//console.log(v)
+	//console.log(vellim)
 	for(i=0;i<vel.length;i++){
 		if(vel[i]>=vellim[0] && vel[i]<=vellim[1]){
 			velidx.push(i)
 		}
 	}
 	
-	console.log("velidx: " + velidx)
+	//console.log("velidx: " + velidx)
 	//let velup = vel[velidx[velidx.length - 1]]
 	let velup = vel[velidx[1]]
-	console.log("velup: " +  velup)
+	//console.log("velup: " +  velup)
 	//let veldown = vel[velidx[0]]
 	let veldown = vel[velidx[0]]
-	console.log("veldown: " +  veldown)
+	//console.log("veldown: " +  veldown)
 	let dv = Math.abs(velup-veldown)
-	console.log("dv: " + dv)
+	//console.log("dv: " + dv)
 
     //### Identify pixels where flux level is below noise level & replace w/noise
     let effflux = flux
@@ -565,16 +563,16 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 		}
 	}
 	
-	console.log("belowerr: " + belowerr)
+	//console.log("belowerr: " + belowerr)
 	effflux[belowerr] = ferr[belowerr]
-	console.log(effflux[belowerr])
+	//console.log(effflux[belowerr])
 
 	//### Calculate EW and errors due to flux and continuum placement
 	let EWpix = [];
 	let sigEWf = [];
 	let tauv = [];
 	let tauverr_f = [];
-
+/*
 	console.log('LOOK HERE')
 	console.log('dv :' + dv)
 	console.log('velidx: ' + velidx)
@@ -582,6 +580,7 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 	console.log('cont: ' + cont)
 	console.log('restlam: ' + restlam)
 	console.log('c: ' + c)
+	*/
 	for(i=0;i<velidx.length;i++){
 		let l = dv*(1-effflux[velidx[i]]/cont[velidx[i]])*restlam/c
 		let m = dv / cont[velidx[i]] * ferr[velidx[i]] * restlam/c
@@ -592,18 +591,20 @@ function EW_ACD_array(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=12
 		tauv.push(n)
 		tauverr_f.push(o)
 	}
+	/*
 	console.log(EWpix)
 	console.log("EWpix: " +  EWpix)
 	console.log("sigEWf: " +  sigEWf)
 	console.log("tauv: " + tauv)
 	console.log("tauverr_f" + tauverr_f)
+	*/
 
     //### Calculate optical depth and uncertainty due to flux and continuum
 	
 	let Npix=math.multiply(1/(2.654e-15)/restlam/fosc*dv,tauv)
-	console.log("Npix: " + Npix)
+	//console.log("Npix: " + Npix)
     let sigNf = math.multiply(1./2.654e-15/restlam/fosc*dv,tauverr_f)
-	console.log("sigNf:" + sigNf)
+	//console.log("sigNf:" + sigNf)
 	return [EWpix,sigEWf,Npix,sigNf]
 }
 
@@ -627,15 +628,16 @@ function EW_ACD(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=1215.67,
 	sigEWf = EWarray[1],
 	Npix = EWarray[2],
 	sigNf = EWarray[3]
+	/*
 	console.log("EWpix: " + EWpix)
 	console.log("sigEWf: " + sigEWf)
 	console.log("Npix: " + Npix)
 	console.log("sigNf: " + sigNf)
-
+	*/
     // Totals and errors from each contribution
 	let EW = math.sum(EWpix)
 	//console.log(EW)
-	console.log("EW: " + EW)
+	//console.log("EW: " + EW)
     let N = math.sum(Npix)
 	//console.log("N: " + N)
 
@@ -657,22 +659,21 @@ function EW_ACD(wave,flux,ferr,zabs,vellim=[-50,50],cont="None",restlam=1215.67,
 
 function pressLeft(){
 	z_left = EW_coord[0]
-	console.log("z_left: " + z_left)
+	//console.log("z_left: " + z_left)
 	d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
-	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('left boundary selected')
-	//f = EW_coord[1]
+	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('left boundary ✓, press "E"')
 }
 
 function pressRight(){
 	z_right = EW_coord[0]
-	console.log("z_right: " + z_right)
+	//console.log("z_right: " + z_right)
 	d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
-	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('right boundary selected')
+	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('right boundary ✓, press "E"')
 }
 
 function selectZ(){
 	z_abs = EW_coord[0]
-	console.log("z_abs: " + z_abs)
+	//console.log("z_abs: " + z_abs)
 	d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
 	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('center point selected')
 	getSkewerSpectra();
@@ -731,16 +732,16 @@ function EW_plot_init(){
 	d3.select('#bottom-panel').selectAll('#EW-plot').select('#EWplot').remove()
 	let ret = d3.select('#bottom-panel').selectAll('#EW-plot').append('svg')
 		.attr('id','EWplot')
-		.attr("width", 210)
+		.attr("width", 208)
 		.attr("height", 200)
-		.attr("transform", "translate(" + (window.innerWidth-columnWidth - 210) + ",0)")
-		.style('fill', '#868686')
+		//.attr("transform", "translate(" + (window.innerWidth-columnWidth - 210) + ",0)")
+		.style('fill', '#1d1d1d')
 	ret.append('rect')
 			.attr('x',0)
 			.attr('y',0)
-			.attr('width', 210)
+			.attr('width', 208)
 			.attr('height', 200)
-			.attr('fill', '#868686')
+			.attr('fill', '#1d1d1d')
 	if(EW_stat == 0){
 		d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
 		d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('Press "E" to start')
@@ -769,7 +770,7 @@ function EW_plot(){
 		.range([0,155])
 	var yScale = d3.scaleLinear()
 		.domain([1,0])
-		.range([0,155])
+		.range([0,140])
 	var svg = d3.select("body").select('#bottom-panel').select('#EW-plot').select('#EWplot').append('svg')
 		.append("g")
 		.attr('transform','translate(45,180)')
@@ -782,6 +783,7 @@ function EW_plot(){
 	// Y-axis
 	var yAxis = d3.axisLeft()
 		.scale(yScale)
+		.ticks(5)
 	svg.append("g")
 		.attr("class","xAxis")
 		.attr("transform","translate(0,-15)")
@@ -789,19 +791,19 @@ function EW_plot(){
 	svg.append("text")
 		.text("Impact Parameter (Mpc)")
 		.style("fill","white")
-		.attr("font-size","10px")
-		.attr("transform","translate(8,16)")
+		.attr("font-size","11px")
+		.attr("transform","translate(0,16)")
 	svg.append("g")
 		.attr("class","yAxis")
 		.call(yAxis)
-		.attr('transform','translate(0,-170)')
+		.attr('transform','translate(0,-155)')
 	svg.append("text")
 		.text("Equivalent Width (Å)")
 		.attr('transform','rotate(-90)')
-		.attr("y", -33)
-		.attr("x", 30)
+		.attr("y", -36)
+		.attr("x", 25)
 		.style("fill", "white")
-		.attr("font-size","10px")
+		.attr("font-size","11px")
 	
 	//add error line
 	svg.append("g").selectAll("line")
@@ -834,7 +836,12 @@ function EW_plot(){
 			}
 		})
 		.attr('stroke',function(d){
-			return d.color
+			if (d.color == 'blue') {
+				return ('#00aeff')	// blue
+			} else {
+				return('#ff0000')	// red
+			}
+			//return d.color
 		})
 
 		// Add Error Top Cap
@@ -873,7 +880,11 @@ function EW_plot(){
 			}
 		})
 		.attr('stroke',function(d){
-			return d.color
+			if (d.color == 'blue') {
+				return ('#00aeff')	// blue
+			} else {
+				return('#ff0000')	// red
+			}
 		})
 		
 		// Add Error Bottom Cap
@@ -911,7 +922,11 @@ function EW_plot(){
 			}
 		})
 		.attr('stroke',function(d){
-			return d.color
+			if (d.color == 'blue') {
+				return ('#00aeff')	// blue
+			} else {
+				return('#ff0000')	// red
+			}
 		})
 			//console.log(neighbors)
 			// setup x 
@@ -943,7 +958,11 @@ function EW_plot(){
 			}
 		})
 		.attr('stroke',function(d){
-			return d.color
+			if (d.color == 'blue') {
+				return ('#00aeff')	// blue
+			} else {
+				return('#ff0000')	// red
+			}
 		})
 	
 	svg.selectAll(".dot")
@@ -961,7 +980,11 @@ function EW_plot(){
             else return yScale(d.ew)-170;
 		})
 		.attr('fill',function(d){
-			return d.color
+			if (d.color == 'blue') {
+				return ('#00aeff')	// blue
+			} else {
+				return('#ff0000')	// red
+			}
 		})
 		.on("mouseover", function(d) {
 			tooltip.transition()
@@ -969,7 +992,7 @@ function EW_plot(){
 				 .style("opacity", 0.75);
 			tooltip.html("QSO: " + d.skewer + "<br/> NSAID: " + d.NSAID + "<br/> IP: " + d.ip + " Mpc <br/> EW: " + roundtofive(d.ew) + " Å <br/> zmin: " + d.zmin + "<br/> zmax: " + d.zmax + "<br/> zabs: " + d.zabs + "<br/> velmin: " + d.velmin + " km/s <br/> velmax: " + d.velmax + "km/s")
 				 .style("left", (d3.event.pageX - 25) + "px")
-				 .style("top", (d3.event.pageY - 150) + "px")
+				 .style("top", (d3.event.pageY - 170) + "px")
 			var g = galaxies[d.gidx]
 			currentGalaxy = [g,d.gidx];
 			plotGalaxyImage(d.gidx)
@@ -986,9 +1009,9 @@ function filterNeighborsEW(EW,z_min,z_max,skewerName,err){
 	let mn = z_min
 	let mx = z_max
 	let i = skewer.indexOf(skewerName)
-	console.log('z_min:' + mn)
+	/*console.log('z_min:' + mn)
 	console.log('z_max:' + mx)
-	console.log('skewer: ' + i)
+	console.log('skewer: ' + i)*/
 	quasar_galaxy_EW_neighbors = []
 	if(i != -1){
 		let k = skewer[i], //v = skewerData.get(k),
@@ -1025,7 +1048,7 @@ function filterNeighborsEW(EW,z_min,z_max,skewerName,err){
 	x = quasar_galaxy_EW_neighbors.sort(function(a, b){
 		return a.ip-b.ip
 	})
-	console.log(x[0])
+	//console.log(x[0])
 	return x[0];
 }
 
@@ -1048,6 +1071,14 @@ function onKeyDown(event) {
 		if(EW_stat == 0){
 			d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
 			d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('select left boundary')
+		}
+		if(EW_stat == 1){
+			d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
+			d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('select right boundary')
+		}
+		if(EW_stat == 2){
+			d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
+			d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('select center point')
 		}
 	}
 	
@@ -1079,10 +1110,14 @@ function onKeyDown(event) {
 	//toggle text visibility in 3D view
 	else if ( keyChar  == 'T') {
 		textGroup.visible = !textGroup.visible;
+	}
+
+	else if ( keyChar  == 'Z') {
+		zoomToGalaxy()	
 	}	
 
 	//on numerical key press, stores selected skewer to that graph
-	if ( keyChar == '1') {
+	else if ( keyChar == '1') {
 		if(prevCylOverIdx[1] == -1){
 			prevCylOverIdx[1] = prevCylOverIdx[0];
 		}
@@ -1123,6 +1158,7 @@ function onKeyDown(event) {
 	}		
 	else if ( keyChar == '5') {
 		if(prevCylOverIdx[5] == -1){
+			prevCylOverIdx[5] = prevCylOverIdx[0];
 		}
 		else{
 			prevCylOverIdx[5] = -1
@@ -1209,7 +1245,7 @@ function selectSkewer() {
 	cyl_0.geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
 	cyl_0.geometry.attributes.isSelected.needsUpdate = true;
 	for(i=1;i<prevCylOverIdx.length;i++){
-		if(cyl[i] != -1){
+		if(cyl[i] && cyl[i] != -1){
 			cyl[i] = cylinderGroup.children[prevCylOverIdx[i]]
 			cyl[i].geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
 			cyl[i].geometry.attributes.isSelected.needsUpdate = true;
@@ -1418,9 +1454,9 @@ function plotSkewerSpectra() {
 								//d = x0 - d0.date > d1.date - x0 ? d1 : d0;
 								if(E_pressed && u.key == "HI"){
 									EW_selected = [skewer[skewIdx],spectra]
-									console.log(EW_selected)
-									console.log(x0,y0)
-									console.log(EW_stat)
+									//console.log(EW_selected)
+									//console.log(x0,y0)
+									//console.log(EW_stat)
 									if(EW_stat == 0){ //means E has not been pressed yet
 										pressLeft();
 										EW_stat = 1;
@@ -1472,7 +1508,7 @@ function plotSkewerSpectra() {
 									.attr('stroke', 'white')
 									.append('text')
 									.attr("transform", "translate(-10," + 3*graphHeight/4 + ") rotate(-90)")
-				 		     		.style("text-anchor", "middle")
+									.style("text-anchor", "middle")
 									.text('HI');
 								graph.append('g').attr('class', 'yaxis')
 									.attr('stroke', 'white')
@@ -1576,14 +1612,18 @@ function plotSkewerNeighbors() {
 						.attr('height', 2*halfSize)
 						//.attr('fill', '#ffff00')
 						//.attr('opacity', 1 / (30*dist + 1))
-						.attr('opacity', .7)
+						.attr('opacity', .85)
 						.datum(j)
 						.style('fill', (j) => {
 							if(currentGalaxy[1] && currentGalaxy[1] == (j)){
-								return('#ffaaaa')
+								return('#00ff00')	//  green
 							}
-							else if(selectedGalaxies.includes(j)){
-								return('#5e5eff')
+							if(selectedGalaxies.includes(j)){
+								if (galaxies[j].color == 'blue') {
+									return ('#00aeff')	// blue
+								} else {
+									return('#ff0000')	// red
+								}
 							}
 						})
 						.on('mouseover', (j) => {
@@ -1640,7 +1680,7 @@ function plotGalaxyImage(idx){
 		galaxyImage.append('img')
 			//.attr('src', 'data/galaxyImages_partial/' + g.NSAID + '.jpg')
 			.attr('src', 'data/galaxyImages/' + g.NSAID + '.jpg')
-			.attr('width', '200px')
+			.attr('width', '160px')
 			.on('mouseover', (j) => {			
 				pointOverIdx = idx //;
 				selectPoint()
@@ -1660,10 +1700,12 @@ function plotGalaxyImage(idx){
 			.attr('class','galaxyQueue')
 		svg.append('img')
 			.attr('src', 'data/galaxyImages/' + g.NSAID + '.jpg')
-			.attr('height', '200px')
+			.attr('height', '160px')
+			.attr('padding', '10px')
 			.on('mouseover', (j) => {
 				pointOverIdx = j //;
 				selectPoint()
+				
 			})
 			.on('mouseout', (j) =>{
 				prevPointOverIdx = j
@@ -1859,7 +1901,8 @@ function processOptions(callback) {
 			var vals = v.split(",");
 			cameraFocalPoint = new THREE.Vector3(
 				parseFloat(vals[0]), parseFloat(vals[1]), parseFloat(vals[2]));
-			controls.noZoom = true;
+			//controls.noZoom = true;
+			controls.enableZoom = false;
 			controls.target = cameraFocalPoint;
 			controls.update();
 			},
@@ -1897,6 +1940,13 @@ function sphericalToCartesian(RA,DEC,redshift) {
 	var z = sph_pos.radius*Math.sin(sph_pos.phi)
 	var cartesian_position = new THREE.Vector3(x,y,z)
 	return cartesian_position;
+}
+
+function zoomToGalaxy(){
+	pos = currentGalaxy[0]
+	poss = sphericalToCartesian(pos.RA,pos.DEC,pos.redshift*0.9)
+	camera.position.set(poss.x,poss.y,poss.z)
+	camera.lookAt(pos.position.x,pos.position.y,pos.position.z)
 }
 
 function processGalaxyData(data) {
@@ -1984,7 +2034,7 @@ function processGalaxyData(data) {
 }
 
 function filterGalaxiesNearSkewers() {
-	//turn off all stars, then go through the selected skewers and turn on ones that < maxDistance from it
+	/*//turn off all stars, then go through the selected skewers and turn on ones that < maxDistance from it
 	for (let j = 0; j < galaxies.length; ++j) {		
 		boxOfPoints.geometry.attributes.isVisible.array[ j ] = 0.0;				
 		let dist = projections[j]
@@ -1992,7 +2042,7 @@ function filterGalaxiesNearSkewers() {
 			boxOfPoints.geometry.attributes.isVisible.array[ j ] = 1.0;
 		}
 		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
-	}
+	}*/
 }
 
 
@@ -2133,6 +2183,8 @@ function init() {
 	renderer = new THREE.WebGLRenderer();
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( window.innerWidth - columnWidth, window.innerHeight - 200 );
+	renderer.antialias = true;
+	//renderer.logarithmicDepthBuffer = true
 	//renderer.setClearColor (0x333333, 0.1);
 	camera = new THREE.PerspectiveCamera(
 		54 /* fov */, (window.innerWidth - columnWidth) / (window.innerHeight - 200) /* aspect */,
@@ -2175,6 +2227,7 @@ function init() {
 	EW_plot_init()
 }
 
+
 function onMouseWheel(event){
 	let x = event.clientX
 	let y = event.clientY
@@ -2199,8 +2252,7 @@ function onMouseWheel(event){
 		}
 	}
 
-	
-	//camera.position.z += event.deltaY * 0.1;
+		//camera.position.z += event.deltaY * 0.1;
 	//camera.lookAt(mouse.x,mouse.y,camera.position.z)
 }
 
@@ -2223,7 +2275,7 @@ function displayGui(){
 		galRvirScal: galaxyRvirScalar,
 		galRedHSL: [galRed.r * 255, galRed.g * 255, galRed.b * 255],
 		galBlueHSL: [galBlue.r * 255, galBlue.g * 255, galBlue.b * 255],
-		skewerWidth: skewerWidth,
+		//skewerWidth: skewerWidth,
 		skewerAbsorMinHSL: [skewMinHSL.r * 255, skewMinHSL.g * 255, skewMinHSL.b * 255],
 		skewerAbsorMaxHSL: [skewMaxHSL.r * 255, skewMaxHSL.g * 255, skewMaxHSL.b * 255],
 
@@ -2246,7 +2298,7 @@ function displayGui(){
 	var skewerFolder = gui.addFolder("Skewers");
 	var skewerVis = skewerFolder.add(guiParams, "skewersVisible").name("Toggle Skewer Visibility");
 	var textVis =   skewerFolder.add(guiParams, "textVisible").name("Toggle Text Visibility");
-	var skewerWidthChange = skewerFolder.add(guiParams, "skewerWidth", 0.0, 0.5).step(0.01).name("Width");
+	//var skewerWidthChange = skewerFolder.add(guiParams, "skewerWidth", 0.0, 0.5).step(0.01).name("Width");
 	var skewerMinAbs = skewerFolder.addColor(guiParams, "skewerAbsorMinHSL").name("Minimum Absorption");
 	var skewerMaxAbs = skewerFolder.addColor(guiParams, "skewerAbsorMaxHSL").name("Maximum Absorption");
 
@@ -2270,6 +2322,10 @@ function displayGui(){
 			createAbsorptionDataTexture(skewer[i]);
 		}
 	});
+
+	/*skewerWidthChange.onChange(function(value){
+		skewerWidth = value;
+	});*/
 
 	skewerMaxAbs.onChange(function(value){
 		skewerAbsorptionMaxHSL = "rgb("+Math.round(value[0])+", "+Math.round(value[1])+", "+Math.round(value[2])+")";
