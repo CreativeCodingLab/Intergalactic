@@ -1241,17 +1241,23 @@ function unselectPoint() {
 
 // WIP - pass bool attribute to fragment shader of each cylinder?
 function selectSkewer() {
-	cyl_0 = cylinderGroup.children[cylOverIdx]
-	cyl_0.geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
-	cyl_0.geometry.attributes.isSelected.needsUpdate = true;
+	if(cylOverIdx != -1){
+		cyl_0 = cylinderGroup.children[cylOverIdx]
+		cyl_0.geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
+		cyl_0.geometry.attributes.isSelected.needsUpdate = true;
+	}
+	else if(prevCylOverIdx[0] != -1){
+		cyl_0 = cylinderGroup.children[prevCylOverIdx[0]]
+		cyl_0.geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
+		cyl_0.geometry.attributes.isSelected.needsUpdate = true;
+	}
 	for(i=1;i<prevCylOverIdx.length;i++){
-		if(cyl[i] != -1){
+		if(prevCylOverIdx[i] != -1){
 			cyl[i] = cylinderGroup.children[prevCylOverIdx[i]]
-			if(cyl[i]){
-				cyl[i].geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
-				cyl[i].geometry.attributes.isSelected.needsUpdate = true;
-			}
+			cyl[i].geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
+			cyl[i].geometry.attributes.isSelected.needsUpdate = true;
 		}
+		
 	}
 }
 function unselectSkewer() {
@@ -1263,6 +1269,11 @@ function unselectSkewer() {
 	}
 	if(cyl_0){
 		cyl_0.geometry.attributes.isSelected.set(Array(192).fill(0.0)) // OR, swap out material?
+		cyl_0.geometry.attributes.isSelected.needsUpdate = true;
+	}
+	if(cylOverIdx != -1){
+		cyl_0 = cylinderGroup.children[cylOverIdx]
+		cyl_0.geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
 		cyl_0.geometry.attributes.isSelected.needsUpdate = true;
 	}
 }
@@ -1538,6 +1549,8 @@ function plotSkewerSpectra() {
 				.attr('fill', 'white')
 				.text(k);
 	}
+	unselectSkewer()
+	selectSkewer()
 	plotSkewerNeighbors();
 }
 function plotSkewerNeighbors() {
