@@ -1117,7 +1117,7 @@ function onKeyDown(event) {
 	}	
 
 	//on numerical key press, stores selected skewer to that graph
-	else if ( keyChar == '1') {
+	if ( keyChar == '1') {
 		if(prevCylOverIdx[1] == -1){
 			prevCylOverIdx[1] = prevCylOverIdx[0];
 		}
@@ -1245,10 +1245,12 @@ function selectSkewer() {
 	cyl_0.geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
 	cyl_0.geometry.attributes.isSelected.needsUpdate = true;
 	for(i=1;i<prevCylOverIdx.length;i++){
-		if(cyl[i] && cyl[i] != -1){
+		if(cyl[i] != -1){
 			cyl[i] = cylinderGroup.children[prevCylOverIdx[i]]
-			cyl[i].geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
-			cyl[i].geometry.attributes.isSelected.needsUpdate = true;
+			if(cyl[i]){
+				cyl[i].geometry.attributes.isSelected.set(Array(192).fill(1.0)) // OR, swap out material?
+				cyl[i].geometry.attributes.isSelected.needsUpdate = true;
+			}
 		}
 	}
 }
