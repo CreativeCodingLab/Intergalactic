@@ -816,10 +816,10 @@ function EW_plot(){
 		.attr("y1", function(d) {
 			if(d.ew < 3*d.sigEWf){
 				let ew = 3*d.sigEWf
-				return yScale(ew-0.1)-170;
+				return yScale(ew-0.1)-150;
 			}
 			else{
-				return yScale(d.ew + d.sigEWf)-170;
+				return yScale(d.ew + d.sigEWf)-150;
 			}
 		})
 		.attr("x2", function(d) {
@@ -832,7 +832,7 @@ function EW_plot(){
 				return yScale(ew)-170;
 			}
 			else{
-				return yScale(d.ew - d.sigEWf)-170;
+				return yScale(d.ew - d.sigEWf)-150;
 			}
 		})
 		.attr('stroke',function(d){
@@ -860,7 +860,7 @@ function EW_plot(){
 			if(d.ew < 3*d.sigEWf){
 			}
 			else{
-				return yScale(d.ew + d.sigEWf)-170;
+				return yScale(d.ew + d.sigEWf)-150;
 			}
 		})
 		.attr("x2", function(d) {
@@ -876,7 +876,7 @@ function EW_plot(){
 				//yScale(ew + d.sigEWf)-170;
 			}
 			else{
-				return yScale(d.ew + d.sigEWf)-170;
+				return yScale(d.ew + d.sigEWf)-150;
 			}
 		})
 		.attr('stroke',function(d){
@@ -898,10 +898,10 @@ function EW_plot(){
 		.attr("y1", function(d) {
 			if(d.ew < 3* d.sigEWf){
 				let ew = 3*d.sigEWf
-				return yScale(ew - 0.1)-174;
+				return yScale(ew - 0.1)-154;
 			}
 			else{
-				return yScale(d.ew - d.sigEWf)-170;
+				return yScale(d.ew - d.sigEWf)-150;
 			}
 		})
 		.attr("x2", function(d) {
@@ -915,10 +915,10 @@ function EW_plot(){
 		.attr("y2", function(d) {
 			if(d.ew < 3* d.sigEWf){
 				let ew = 3*d.sigEWf
-				return yScale(ew - 0.1)-170;
+				return yScale(ew - 0.1)-150;
 			}
 			else{
-				return yScale(d.ew - d.sigEWf)-170;
+				return yScale(d.ew - d.sigEWf)-150;
 			}
 		})
 		.attr('stroke',function(d){
@@ -943,7 +943,7 @@ function EW_plot(){
 		.attr("y1", function(d) {
 			if(d.ew < 3* d.sigEWf){
 				let ew = 3*d.sigEWf
-				return yScale(ew - 0.1)-170;
+				return yScale(ew - 0.1)-150;
 			}
 		})
 		.attr("x2", function(d) {
@@ -954,7 +954,7 @@ function EW_plot(){
 		.attr("y2", function(d) {
 			if(d.ew < 3* d.sigEWf){
 				let ew = 3*d.sigEWf
-				return yScale(ew - 0.1)-174;
+				return yScale(ew - 0.1)-154;
 			}
 		})
 		.attr('stroke',function(d){
@@ -975,9 +975,9 @@ function EW_plot(){
 		})
         .attr("cy", function(d) {
 			if(d.ew < 3* d.sigEWf){
-				return yScale(3*d.sigEWf)-170;
+				return yScale(3*d.sigEWf)-150;
 			}
-            else return yScale(d.ew)-170;
+            else return yScale(d.ew)-150;
 		})
 		.attr('fill',function(d){
 			if (d.color == 'blue') {
