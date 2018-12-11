@@ -767,7 +767,7 @@ function EW_plot(){
 	//var svg = d3.select("body").select('#bottom-panel').select('#EW-plot').select('#EWplot')
 	var xScale = d3.scaleLinear()
 		.domain([0,distanceFromSkewer])
-		.range([0,140])
+		.range([0,150])
 	var yScale = d3.scaleLinear()
 		.domain([1,0])
 		.range([0,130])
