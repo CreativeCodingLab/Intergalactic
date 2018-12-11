@@ -2166,7 +2166,7 @@ function plotSkewer(name, RA, DEC){
 			redrawInterval: 250,
 			texture: {
 				text: name,
-				fontFamily: 'Avenir, monospace, Arial, Helvetica, sans-serif',
+				fontFamily: 'Karla, Avenir, monospace, Arial, Helvetica, sans-serif',
 				textAlign: 'left',
 			},
 			material: {
