@@ -1,7 +1,7 @@
 galaxyData=data/galaxiesInSdssSlice_viz.dat
 galaxyRvirScalar=1
-galaxyRedHSL=hsl(7, 100%, 22%)
-galaxyBlueHSL=hsl(212, 100%, 18%)
+galaxyRedHSL=hsl(7, 100%, 30%)
+galaxyBlueHSL=hsl(212, 100%, 35%)
 projectionData=data/projections/projections.json
 skewerData=data/qsosInSdssSlice_viz.dat
 skewerWidth=0.125
