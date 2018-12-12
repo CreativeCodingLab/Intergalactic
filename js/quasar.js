@@ -829,7 +829,7 @@ function EW_plot(){
 			if(d.ew < 3* d.sigEWf){
 				let ew = 3*d.sigEWf
 				//return yScale(d.ew - ew)-170;
-				return yScale(ew)-170;
+				return yScale(ew)-150;
 			}
 			else{
 				return yScale(d.ew - d.sigEWf)-150;
