@@ -1600,7 +1600,7 @@ function plotSkewerNeighbors() {
 						halfWidth = 2*u.mstars
 					}
 					else if(boxWidth == 'onePx'){
-						halfWidth = 1
+						halfWidth = 2
 					}
 					if(boxHeight == 'dist'){
 						halfSize = 10/(dist)
