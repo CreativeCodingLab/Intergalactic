@@ -1559,9 +1559,11 @@ function plotSkewerNeighbors() {
 	
 	d3.select('#box-height').on('change', function(a){
 		boxHeight = d3.select(this).property('value');
+		plotSkewerNeighbors()
 	})
 	d3.select('#box-width').on('change', function(a){
 		boxWidth = d3.select(this).property('value');
+		plotSkewerNeighbors()
 	})
 	
 	for(w=0;w<n;w++){
