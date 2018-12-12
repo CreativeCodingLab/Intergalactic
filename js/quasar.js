@@ -769,7 +769,7 @@ function EW_plot(){
 		.domain([0,distanceFromSkewer])
 		.range([0,150])
 	var yScale = d3.scaleLinear()
-		.domain([1,0])
+		.domain([1.2,0])
 		.range([0,130])
 	var svg = d3.select("body").select('#bottom-panel').select('#EW-plot').select('#EWplot').append('svg')
 		.append("g")
