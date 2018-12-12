@@ -678,7 +678,7 @@ function selectZ(){
 	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('center point selected')
 	getSkewerSpectra();
 	d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
-	d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('Press "E" to start')	
+	//d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('Press "E" to start')	
 }
 
 function getSkewerSpectra(){
