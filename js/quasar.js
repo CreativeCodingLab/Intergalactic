@@ -800,7 +800,7 @@ function EW_plot(){
 	svg.append("text")
 		.text("Equivalent Width (Å)")
 		.attr('transform','rotate(-90)')
-		.attr("y", -36)
+		.attr("y", -30)
 		.attr("x", 35)
 		.style("fill", "white")
 		.attr("font-size","11px")
