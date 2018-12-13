@@ -1,6 +1,4 @@
 //QUASAR.JS
-//In coordination with the CreativeCodingLab and the Astrophysics department at UCSC
-//Jasmine Otto, David Abramov, Joe Burchett (Astrophysics), Angus Forbes
 
 /*var m = [x,y]
 								console.log(m)
