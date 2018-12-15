@@ -59,10 +59,10 @@ Z : zoom camera to selected galaxy in 3D view <br/>
 
 IGM-Vis was created by a team of researchers at University of California, Santa Cruz.
 
-Dept. of Astronomy and Astrophysics: Joseph N. Burchett, J. X. Prochaska;
-Dept. of Computational Media: Angus G. Forbes, David Abramov, Cassia Artanegara, Jasmine Otto
+- Dept. of Astronomy and Astrophysics: Joseph N. Burchett, J. X. Prochaska;
+- Dept. of Computational Media: David Abramov, Cassia Artanegara, Jasmine Otto, and Angus G. Forbes
 
-An article introducing IGM-Vis is currently under review to EuroVis'19.
+An article introducing IGM-Vis is currently under review for EuroVis'19.
 
 
 
