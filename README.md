@@ -54,6 +54,10 @@ Z : zoom camera to selected galaxy in 3D view <br/>
 
 [![IGM-Vis](images/IGM-Vis_galaxies.png)](images/IGM-Vis_galaxies.png "IGM-Vis")
 
+## Data Processing
+
+Galaxies positions and metadata are loaded from `data/galaxies.json` file using the `loadGalaxyData()` function. Once this file has been read, the function `loadSkewerData()` is called and reads the list of QSOs `qsosInSdssSlice_viz.dat` for their name, Right Ascension (RA) and Declination (DEC). The HI and CIV spectra for each QSO listed in `qsosInSdssSlice_viz.dat` is loaded from these folders respectively:  `data/spectra_HI_norm` and `data/spectra_CIV_norm`. Calculating the projected distance between every skewer and galaxy can be done using the function `computeProjections()`, which uses the `haversine()` function to calculate an angular distance (impact parameter) between the two objects. In order to do this calculation, redshift must converted to physical units, which is done with the `cosmcalc()` function. In order to save time, a lookup table stored in `data/projections/lookUp.json` is referenced, which was created using the `cosmcalc()` function. If values outside of the range contained in the lookup table are needed, the computation is done on demand. In order to quicken the initial loading time even further, the impact parameter values for this dataset were precomputed in Megaparsecs using the steps outlined above and are stored in the folder `data/projections` as a separate file for each quasar with the function `loadP()`. Data can be downloaded into a .json file using the function `exportData('example.json',JSON.stringify([an array]))`. The data object that is downloaded on the "D" key press can be modified in the `onKeyDown(event)` event handler.
+
 
 ## Authors
 
