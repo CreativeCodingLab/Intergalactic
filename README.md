@@ -5,7 +5,6 @@
 
 The Intergalactic Media Visualization, or IGM-Vis, is a novel visualization and data analysis platform for investigating galaxies and the gas that surrounds them in context with their larger scale environment, the Cosmic Web.  Environment is an important factor in the evolution of galaxies from actively forming stars to a quiescent state with little, if any, discernible star formation activity. The gaseous halos of galaxies (the circumgalactic medium, or CGM) play a critical role in their evolution, because the gas necessary to fuel star formation and any gas expelled from widely observed galactic winds must encounter this interface region between galaxies and the intergalactic medium (IGM). 
 
-
 The blue and red spheres represent star-forming and quiescent galaxies, respectively, and the
 'skewers' piercing the volume are QSO sightlines. Mouse over a galaxy to see an image and a few
 of its properties in the lower panel.  Mouse over a skewer and the right-hand panels show the spectral region where H I or C IV (or other available sperctra) fall within a specified redshift range.  If a galaxy has an impact parameter within the range indicated by the bottom-right slider, a
@@ -43,7 +42,29 @@ Z : zoom camera to selected galaxy in 3D view <br/>
 
 [![IGM-Vis](images/IGM-Vis_zoomAndFilter.png)](images/IGM-Vis_zoomAndFilter.png "IGM-Vis")
 
+
 [![IGM-Vis](images/IGM-Vis_skwererSpectra.png)](images/IGM-Vis_skwererSpectra.png "IGM-Vis")
 
+
 [![IGM-Vis](images/IGM-Vis_EquivalentWidthPlot.png)](images/IGM-Vis_EquivalentWidthPlot.png "IGM-Vis")
+
+
+[![IGM-Vis](images/IGM-Vis_Coherence.png)](images/IGM-Vis_Coherence.png "IGM-Vis")
+
+
+[![IGM-Vis](images/IGM-Vis_galaxies.png)](images/IGM-Vis_galaxies.png "IGM-Vis")
+
+
+## Authors
+
+IGM-Vis was created by a team of researchers at University of California, Santa Cruz.
+
+Dept. of Astronomy and Astrophysics: Joseph N. Burchett, J. X. Prochaska;
+Dept. of Computational Media: Angus G. Forbes, David Abramov, Cassia Artanegara, Jasmine Otto
+
+An article introducing IGM-Vis is currently under review to EuroVis'19.
+
+
+
+
 
