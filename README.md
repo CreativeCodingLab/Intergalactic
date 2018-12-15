@@ -16,25 +16,34 @@ the slider.
 
 Galaxy/absorber pairs can be tracked using the numeric keys '0' through '9' (skghtlines) and 'G' (galaxies), and then saved to disk for further analysis by pressing 'D'. 
 
-#Video Documentation
+## Video Documentation
 
-A video tutorial with an example use case can be seen here [https://www.youtube.com/watch?v=3ZVaExEVZOk](https://www.youtube.com/watch?v=3ZVaExEVZOk)
+A video tutorial with an example use case can be seen here: [https://www.youtube.com/watch?v=3ZVaExEVZOk](https://www.youtube.com/watch?v=3ZVaExEVZOk)
 
 [![IGM-Vis](images/IGM-video.jpg)](https://www.youtube.com/watch?v=3ZVaExEVZOk "IGM-Vis")
 
-#Web Demo
+## Web Demo
 
 The Web demo of IGM-Vis is located at: [https://creativecodinglab.github.io/Intergalactic/intergalactic.html](https://creativecodinglab.github.io/Intergalactic/intergalactic.html) 
 
 
-
-
-## Keystrokes Quick Reference<br/>
-arrow keys: move reference point<br/>
-0 - 9 : store selected skewer<br/>
-E : obtain equivalent width measurements<br/>
-G : store selected galaxy<br/>
+## Quick Reference<br/>
+Arrow keys: move reference point (in 3D view) <br/>
+0 - 9 : store selected skewer to Spectrum Panel<br/>
+E : obtain equivalent width measurements (see video tutorial) <br/>
+G : store selected galaxy in Galaxy Panel<br/>
 D : download json file of all stored skewers with galaxy neighbor pairs<br/>
 S : show / hide skewers in 3D view  <br/>
 T : show / hide text in 3D view  <br/>
-Z : zoom camera to selected galaxy <br/>
+Z : zoom camera to selected galaxy in 3D view <br/>
+
+
+## Screenshots of IGM-Vis
+
+
+[![IGM-Vis](images/IGM-Vis_zoomAndFilter.png)](images/IGM-Vis_zoomAndFilter.png "IGM-Vis")
+
+[![IGM-Vis](images/IGM-Vis_skwererSpectra.png)](images/IGM-Vis_skwererSpectra.png "IGM-Vis")
+
+[![IGM-Vis](images/IGM-Vis_EquivalentWidthPlot.png)](images/IGM-Vis_EquivalentWidthPlot.png "IGM-Vis")
+
