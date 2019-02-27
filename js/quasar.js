@@ -75,7 +75,7 @@ let depthDomain = [.017, .029];
 
 
 //graph initialization
-let n_skewers = 10; //sets the number of graphs available
+let n_skewers = 19; //sets the number of graphs available
 var prevCylOverIdx = []; //keeps track of skewers that are selected
 for(i=0;i<n_skewers;i++){ //initializes selected skewer idx
 	prevCylOverIdx.push(-1);
@@ -1050,13 +1050,24 @@ function filterNeighborsEW(EW,z_min,z_max,skewerName,err){
 	return x[0];
 }
 
+function mapKeyPressToActualCharacter(isShiftKey, characterCode) {
+    if (typeof isShiftKey != "boolean" || typeof characterCode != "number") {
+        return false;
+    }
+
+    if (isShiftKey) {
+        return characterMapShift[characterCode];
+    } else {
+        return characterMap[characterCode];
+    }
+}
 
 
 // EVENT HANDLERS
 function onKeyDown(event) {
-
-	var keyChar = String.fromCharCode(event.keyCode);
 	
+	var keyChar = String.fromCharCode(event.keyCode);
+	var shiftKeyPressed = KeyboardEvent.shiftKey
 	//export an array to json file
 	if( keyChar == 'D') {
 		//exportData('galaxies.json',JSON.stringify(galaxies))
@@ -1115,7 +1126,9 @@ function onKeyDown(event) {
 	}	
 
 	//on numerical key press, stores selected skewer to that graph
-	if ( keyChar == '1') {
+	
+	if ( keyChar == '1' && !event.shiftKey) {
+	
 		if(prevCylOverIdx[1] == -1){
 			prevCylOverIdx[1] = prevCylOverIdx[0];
 		}
@@ -1125,7 +1138,7 @@ function onKeyDown(event) {
 		}
 		plotSkewerSpectra();
 	}
-	else if ( keyChar == '2') {
+	else if ( keyChar == '2' && !event.shiftKey ) {
 		if(prevCylOverIdx[2] == -1){
 			prevCylOverIdx[2] = prevCylOverIdx[0];
 		}
@@ -1135,7 +1148,7 @@ function onKeyDown(event) {
 		}
 		plotSkewerSpectra();
 	}
-	else if ( keyChar == '3') {
+	else if ( keyChar == '3' && !event.shiftKey ) {
 		if(prevCylOverIdx[3] == -1){
 			prevCylOverIdx[3] = prevCylOverIdx[0];
 		}
@@ -1144,7 +1157,7 @@ function onKeyDown(event) {
 			unselectSkewer();
 		}
 		plotSkewerSpectra();	}
-	else if ( keyChar == '4') {
+	else if ( keyChar == '4' && !event.shiftKey ) {
 		if(prevCylOverIdx[4] == -1){
 			prevCylOverIdx[4] = prevCylOverIdx[0];
 		}
@@ -1154,7 +1167,7 @@ function onKeyDown(event) {
 		}
 		plotSkewerSpectra();	
 	}		
-	else if ( keyChar == '5') {
+	else if ( keyChar == '5' && !event.shiftKey ) {
 		if(prevCylOverIdx[5] == -1){
 			prevCylOverIdx[5] = prevCylOverIdx[0];
 		}
@@ -1164,7 +1177,7 @@ function onKeyDown(event) {
 		}
 		plotSkewerSpectra();	
 	}
-	else if ( keyChar == '6') {
+	else if ( keyChar == '6' && !event.shiftKey ) {
 		if(prevCylOverIdx[6] == -1){
 			prevCylOverIdx[6] = prevCylOverIdx[0];
 		}
@@ -1174,7 +1187,7 @@ function onKeyDown(event) {
 		}
 		plotSkewerSpectra();	
 	}
-	else if ( keyChar == '7') {
+	else if ( keyChar == '7' && !event.shiftKey ) {
 		if(prevCylOverIdx[7] == -1){
 			prevCylOverIdx[7] = prevCylOverIdx[0];
 		}
@@ -1184,7 +1197,7 @@ function onKeyDown(event) {
 		}
 		plotSkewerSpectra();	
 	}
-	else if ( keyChar == '8') {
+	else if ( keyChar == '8' && !event.shiftKey ) {
 		if(prevCylOverIdx[8] == -1){
 			prevCylOverIdx[8] = prevCylOverIdx[0];
 		}
@@ -1194,7 +1207,7 @@ function onKeyDown(event) {
 		}
 		plotSkewerSpectra();	
 	}
-	else if ( keyChar == '9') {
+	else if ( keyChar == '9' && !event.shiftKey ) {
 		if(prevCylOverIdx[9] == -1){
 			prevCylOverIdx[9] = prevCylOverIdx[0];
 		}
@@ -1204,6 +1217,98 @@ function onKeyDown(event) {
 		}
 		plotSkewerSpectra();	
 	}
+	else if ( keyChar == '1' && event.shiftKey  ) {
+
+		if(prevCylOverIdx[10] == -1){
+			prevCylOverIdx[10] = prevCylOverIdx[0];
+		}
+		else{
+			prevCylOverIdx[10] = -1
+			unselectSkewer();
+		}
+		plotSkewerSpectra();
+	}
+	else if ( keyChar == '2' && event.shiftKey   ) {
+		if(prevCylOverIdx[11] == -1){
+			prevCylOverIdx[11] = prevCylOverIdx[0];
+		}
+		else{
+			prevCylOverIdx[11] = -1
+			unselectSkewer();
+		}
+		plotSkewerSpectra();
+	}
+	else if ( keyChar == '3' && event.shiftKey   ) {
+		if(prevCylOverIdx[12] == -1){
+			prevCylOverIdx[12] = prevCylOverIdx[0];
+		}
+		else{
+			prevCylOverIdx[12] = -1
+			unselectSkewer();
+		}
+		plotSkewerSpectra();
+	}
+	else if ( keyChar == '4'  && event.shiftKey  ) {
+		if(prevCylOverIdx[13] == -1){
+			prevCylOverIdx[13] = prevCylOverIdx[0];
+		}
+		else{
+			prevCylOverIdx[13] = -1
+			unselectSkewer();
+		}
+		plotSkewerSpectra();	
+	}		
+	else if ( keyChar == '5' && event.shiftKey   ) {
+		if(prevCylOverIdx[14] == -1){
+			prevCylOverIdx[14] = prevCylOverIdx[0];
+		}
+		else{
+			prevCylOverIdx[14] = -1
+			unselectSkewer();
+		}
+		plotSkewerSpectra();	
+	}
+	else if ( keyChar == '6' && event.shiftKey   ) {
+		if(prevCylOverIdx[15] == -1){
+			prevCylOverIdx[15] = prevCylOverIdx[0];
+		}
+		else{
+			prevCylOverIdx[15] = -1
+			unselectSkewer();
+		}
+		plotSkewerSpectra();	
+	}
+	else if ( keyChar == '7' && event.shiftKey   ) {
+		if(prevCylOverIdx[16] == -1){
+			prevCylOverIdx[16] = prevCylOverIdx[0];
+		}
+		else{
+			prevCylOverIdx[16] = -1
+			unselectSkewer();
+		}
+		plotSkewerSpectra();	
+	}
+	else if ( keyChar == '8' && event.shiftKey   ) {
+		if(prevCylOverIdx[17] == -1){
+			prevCylOverIdx[17] = prevCylOverIdx[0];
+		}
+		else{
+			prevCylOverIdx[17] = -1
+			unselectSkewer();
+		}
+		plotSkewerSpectra();	
+	}
+	else if ( keyChar == '9' && event.shiftKey   ) {
+		if(prevCylOverIdx[18] == -1){
+			prevCylOverIdx[18] = prevCylOverIdx[0];
+		}
+		else{
+			prevCylOverIdx[18] = -1
+			unselectSkewer();
+		}
+		plotSkewerSpectra();	
+	}
+	
 };
 
 
@@ -1892,6 +1997,9 @@ function createBrush() {
 				plotSkewerSpectra()
 				plotSkewerNeighbors()
 			}
+
+			filterBrushedGalaxies()
+
 		}
 	}
 }
@@ -2020,8 +2128,13 @@ function processGalaxyData(data) {
 
 	});
 
-	boxOfPoints = new THREE.Points( geometry, material );
-	scene.add( boxOfPoints );
+
+		boxOfPoints = new THREE.Points( geometry, material );
+		scene.add( boxOfPoints );
+	
+	
+	
+	
 /* //This needs to be updated for new coordinate system
 	if (showLabels) {
 		//Label  (x,y,z) = (-0.166381, 0.062923, ?) as ‘Coma cluster’
@@ -2046,6 +2159,19 @@ function processGalaxyData(data) {
 		textGroup.add(sprite);
 	}
 	*/
+}
+
+function filterBrushedGalaxies() {
+	for (i = 0; i < galaxies.length; i ++) {
+		if ( galaxies[i].redshift >  depthDomain[0] && galaxies[i].redshift < depthDomain[1]) {
+			boxOfPoints.geometry.attributes.isVisible.array[ i ] = 1.0;
+		}
+		else {
+			boxOfPoints.geometry.attributes.isVisible.array[ i ] = 0.0;
+		}
+		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
+	}
+	
 }
 
 function filterGalaxiesNearSkewers() {
