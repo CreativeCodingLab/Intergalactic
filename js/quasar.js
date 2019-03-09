@@ -132,15 +132,15 @@ function updateDepthDomain(min, max){
 
 function loadGalaxyData(callback) {
 	//loadProjections()
-	/*
-	d3.json('data/galaxies.json').then(function(d){
+	
+	d3.json('data/galaxies_bigger.json').then(function(d){
 		galaxies = d
 		processGalaxyData(galaxies);
 		//galaxies = data; // TODO: as new Map()
 		callback();
 	//}).then((data) => {
 	});
-	*/
+	/*
 	d3.dsv(" ", galaxyFile, (d) => {
 		return {
 			'NSAID': d.NSAID,
@@ -160,7 +160,7 @@ function loadGalaxyData(callback) {
 		processGalaxyData(data);
 		galaxies = data; // TODO: as new Map()
 		callback();
-	});
+	});*/
 }
 
 
@@ -368,7 +368,7 @@ function loadSkewerData(callback) {
 
 			// individual reads of each element
 			spectra.forEach( (el) => {
-				let path = 'data/spectra_' + el + '_norm/'
+				let path = 'data/spectra_' + el + '_norm_bigger/'
 				d3.dsv(' ', path + file, (d) => {
 					//console.log(d.sig_norm)
 					return {
