@@ -1,9 +1,9 @@
-galaxyData=data/galaxiesInSdssSlice_viz.dat
+galaxyData=data/galaxiesInSdssSlice_viz_bigger.dat
 galaxyRvirScalar=1
 galaxyRedHSL=hsl(7, 100%, 30%)
 galaxyBlueHSL=hsl(212, 100%, 35%)
 projectionData=data/projections/projections.json
-skewerData=data/qsosInSdssSlice_viz.dat
+skewerData=data/qsosInSdssSlice_viz_bigger.dat
 skewerWidth=0.125
 skewerAbsorptionMinHSL=hsl(0, 0%, 0%)
 skewerAbsorptionMaxHSL=hsl(0, 0%, 0%)

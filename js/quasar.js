@@ -1,12 +1,7 @@
 //QUASAR.JS
 
-/*var m = [x,y]
-								console.log(m)
-								var pathNode = d3.select(graph0).select('svg').select('g').select('path.penHI')
-								p = closestPoint(pathNode.node(), m);
-								console.log(p)
-								*/
 var z_d = loadLookUp()
+loadCloseImpactLookUp()
 var EW_coord = []; //redshift + flux
 var EW_all = []
 var z_left,z_right,z_abs, EW_selected, E_pressed;
@@ -101,6 +96,7 @@ var cyl_0;
 var projections = [];
 var quasar_galaxy_neighbors = [];
 var allLoaded = false;
+var filterbyIP = false;
 
 
 
@@ -120,24 +116,31 @@ z_r.forEach(function(d){
 let xScale = () => d3.scaleLinear().domain(depthDomain).range([0, columnWidth - 50]),
 	yScale = () => d3.scaleLinear().domain([0, 2]).range([graphHeight, 0]);	
 
+
 init()
 animate()
 
-
+function updateDepthDomain(min, max){
+	if(min != undefined){
+		depthDomain[0] = min
+	}
+	if(max != undefined){
+		depthDomain[1] = max
+	}
+	xScale = () => d3.scaleLinear().domain(depthDomain).range([0, columnWidth - 50])
+}
 
 function loadGalaxyData(callback) {
 	//loadProjections()
-	
-	d3.json('data/galaxies.json').then(function(d){
+
+	d3.json('data/galaxies_bigger.json').then(function(d){
 		galaxies = d
 		processGalaxyData(galaxies);
 		//galaxies = data; // TODO: as new Map()
 		callback();
 	//}).then((data) => {
-		
 	});
-}
-/*
+	/*
 	d3.dsv(" ", galaxyFile, (d) => {
 		return {
 			'NSAID': d.NSAID,
@@ -157,8 +160,8 @@ function loadGalaxyData(callback) {
 		processGalaxyData(data);
 		galaxies = data; // TODO: as new Map()
 		callback();
-	});
-}*/
+	});*/
+}
 
 
 function loadProjections(){
@@ -181,7 +184,7 @@ function loadP(idxP){
 function loadLookUp(){
 	d3.json('data/projections/lookUp.json').then(function(d){
 		z_d = d
-	})	
+	})
 }
 
 //finds distance conversion based on redshift value in lookup array
@@ -197,6 +200,12 @@ function lookUp(redshift){
 	else{
 		return cosmcalc(redshift)
 	}
+}
+
+function loadCloseImpactLookUp(){
+	d3.dsv(' ', 'data/galaxyCloseImpactLookup_bigger.dat').then(function(d){
+		impactParameters = d
+	})
 }
 
 //calculates distance in Mpc from redshift
@@ -359,7 +368,7 @@ function loadSkewerData(callback) {
 
 			// individual reads of each element
 			spectra.forEach( (el) => {
-				let path = 'data/spectra_' + el + '_norm/'
+				let path = 'data/spectra_' + el + '_norm_bigger/'
 				d3.dsv(' ', path + file, (d) => {
 					//console.log(d.sig_norm)
 					return {
@@ -371,6 +380,18 @@ function loadSkewerData(callback) {
 				}).then( (data) => {
 					if (data.length > 1) { // CATCH sentinel values
 						skewerData.get(d.name)[el] = data // register to model
+						skewer_redshift_min = skewerData.get(d.name)[el][0].redshift
+						if (skewer_redshift_min < depthDomain[0] && skewer_redshift_min != undefined){
+							updateDepthDomain(skewer_redshift_min, undefined)
+							createBrush()
+							createSlider()
+						}
+						skewer_redshift_max = skewerData.get(d.name)[el][skewerData.get(d.name)[el].length - 1].redshift
+						if (skewer_redshift_max > depthDomain[1] && skewer_redshift_max != undefined){
+							updateDepthDomain(undefined,skewer_redshift_max)
+							createBrush()
+							createSlider()
+						}
 						if (el === 'HI')
 							createAbsorptionDataTexture(d.name) //creates texture on skewer cylinders
 					}
@@ -1070,9 +1091,14 @@ function onKeyDown(event) {
 	var shiftKeyPressed = KeyboardEvent.shiftKey
 	//export an array to json file
 	if( keyChar == 'D') {
-		//exportData('galaxies.json',JSON.stringify(galaxies))
-		getQuasarGalaxyNeighbors()
-		exportData('quasar_galaxy_neighbors.json',JSON.stringify(quasar_galaxy_neighbors))
+		//projections.empty
+		//computeProjections()
+		//for(i = 0, len = skewer.length; i < len; i++){
+		//	exportData('p' + i + '.json',JSON.stringify(projections[i]))
+		//}
+		//exportData('galaxies_bigger.json',JSON.stringify(galaxies))
+		/*getQuasarGalaxyNeighbors()
+		exportData('quasar_galaxy_neighbors.json',JSON.stringify(quasar_galaxy_neighbors))*/
 	}
 
 	if( keyChar == 'E'){
@@ -1478,8 +1504,7 @@ function createGraph(n_skewers) {
 		}
 		graphs[i] = ret;
 	}
-	createBrush()
-	createSlider()
+
 	return graphs
 }
 
@@ -1972,7 +1997,7 @@ function createBrush() {
 		x.range([margin.left, width - margin.right]);
 
 		axis.attr('transform', 'translate(0,' + height + ')')
-			.call(d3.axisBottom(x).ticks(4))
+			.call(d3.axisBottom(x).ticks(6))
 
 	}
 
@@ -1990,8 +2015,8 @@ function createBrush() {
 		var s = d3.event.selection || x.range();
 		ret = s.map(x.invert, x);
 		if (ret[0] !== ret[1]) {
-			depthDomain[0] = ret[0]
-			depthDomain[1] = ret[1]
+			
+			updateDepthDomain(ret[0],ret[1])
 
 			if (prevCylOverIdx[0] !== -1 && prevCylOverIdx[0] !== -1) {
 				plotSkewerSpectra()
@@ -2074,7 +2099,6 @@ function zoomToGalaxy(){
 
 function processGalaxyData(data) {
 	var n = data.length;
-
 	var positions = new Float32Array( n * 3 );
 	var selects = new Float32Array( n * 1 );
 	var colors = new Float32Array( n * 1 );
@@ -2162,28 +2186,47 @@ function processGalaxyData(data) {
 }
 
 function filterBrushedGalaxies() {
-	for (i = 0; i < galaxies.length; i ++) {
-		if ( galaxies[i].redshift >  depthDomain[0] && galaxies[i].redshift < depthDomain[1]) {
-			boxOfPoints.geometry.attributes.isVisible.array[ i ] = 1.0;
+	if (filterbyIP == true){
+		for (let j = 0; j < impactParameters.length; ++j) {				
+			let dist = impactParameters[j].smallestImpact/1000
+			if (dist < distanceFromSkewer && galaxies[j].redshift > depthDomain[0] && galaxies[j].redshift < depthDomain[1]) { // filter, then map
+				boxOfPoints.geometry.attributes.isVisible.array[ j ] = 1.0;
+			}
+			else{
+				boxOfPoints.geometry.attributes.isVisible.array[ j ] = 0.0;	
+			}
+			boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
 		}
-		else {
-			boxOfPoints.geometry.attributes.isVisible.array[ i ] = 0.0;
+	}
+	
+	else{
+		for (i = 0; i < galaxies.length; i ++) {
+			if ( galaxies[i].redshift >  depthDomain[0] && galaxies[i].redshift < depthDomain[1]) {
+				boxOfPoints.geometry.attributes.isVisible.array[ i ] = 1.0;
+			}
+			else {
+				boxOfPoints.geometry.attributes.isVisible.array[ i ] = 0.0;
+			}
+			boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
 		}
-		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
 	}
 	
 }
 
 function filterGalaxiesNearSkewers() {
-	/*//turn off all stars, then go through the selected skewers and turn on ones that < maxDistance from it
-	for (let j = 0; j < galaxies.length; ++j) {		
-		boxOfPoints.geometry.attributes.isVisible.array[ j ] = 0.0;				
-		let dist = projections[j]
-		if (dist < distanceFromSkewer) { // filter, then map
+	//turn off all stars, then go through the selected skewers and turn on ones that < maxDistance from it
+	filterbyIP = true
+	for (let j = 0, len = impactParameters.length; j < len; ++j) {		
+					
+		let dist = impactParameters[j].smallestImpact/1000
+		if (dist < distanceFromSkewer && galaxies[j].redshift > depthDomain[0] && galaxies[j].redshift < depthDomain[1]) { // filter, then map
 			boxOfPoints.geometry.attributes.isVisible.array[ j ] = 1.0;
 		}
+		else{
+			boxOfPoints.geometry.attributes.isVisible.array[ j ] = 0.0;	
+		}
 		boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
-	}*/
+	}
 }
 
 
@@ -2204,7 +2247,8 @@ function filterGalaxiesNearSkewers() {
 	}*/
 
 function unfilterGalaxiesNearSkewers() {
-	for (var g = 0; g < galaxies.length; g++)
+	filterbyIP = false
+	for (var g = 0, len = galaxies.length; g < len; g++)
 		boxOfPoints.geometry.attributes.isVisible.array[ g ] = 1.0;
 	boxOfPoints.geometry.attributes.isVisible.needsUpdate = true;
 }
@@ -2212,7 +2256,7 @@ function unfilterGalaxiesNearSkewers() {
 function loadAllP(callback){
 	if(!allLoaded){
 		allLoaded = true;
-		for(n=0;n<skewer.length;n++){
+		for(n=0, len = skewer.length;n<len;n++){
 			loadP(n)
 		}
 	}
@@ -2258,8 +2302,13 @@ function plotSkewer(name, RA, DEC){
 	});
 
 	galaxy_redshift_min = galaxies.reduce((min, p) => p.redshift < min ? p.redshift : min, galaxies[0].redshift)
+	if (galaxy_redshift_min < depthDomain[0]){
+		depthDomain[0] = galaxy_redshift_min
+	}
 	galaxy_redshift_max = galaxies.reduce((max, p) => p.redshift > max ? p.redshift : max, galaxies[0].redshift)
-
+	if (galaxy_redshift_max > depthDomain[1]){
+		depthDomain[1] = galaxy_redshift_max
+	}
 	var startPoint = sphericalToCartesian(RA,DEC,galaxy_redshift_min).clone()
 	var endPoint = sphericalToCartesian(RA,DEC,galaxy_redshift_max).clone()
 
@@ -2358,6 +2407,9 @@ function init() {
 		
 			
 	});
+	createBrush()
+	createSlider()
+	//depthDomain = [galaxies.red, .029]; 
 
 	window.addEventListener( 'resize', onWindowResize, false );
 	document.addEventListener( 'mousemove', onMouseMove, false );
@@ -2459,7 +2511,7 @@ function displayGui(){
 	skewerMinAbs.onChange(function(value){
 		//console.log(value);
 		skewerAbsorptionMinHSL = "rgb("+Math.round(value[0])+" ,"+Math.round(value[1])+" ,"+Math.round(value[2])+")";
-		for(var i = 0; i< cylinderGroup.children.length; i++){
+		for(var i = 0, len = cylinderGroup.children.length; i< len; i++){
 			createAbsorptionDataTexture(skewer[i]);
 		}
 	});
@@ -2471,7 +2523,7 @@ function displayGui(){
 	skewerMaxAbs.onChange(function(value){
 		skewerAbsorptionMaxHSL = "rgb("+Math.round(value[0])+", "+Math.round(value[1])+", "+Math.round(value[2])+")";
 		//console.log(skewerAbsorptionMaxHSL);
-		for(var i = 0; i< cylinderGroup.children.length; i++){
+		for(var i = 0, len = cylinderGroup.children.length; i< len; i++){
 			createAbsorptionDataTexture(skewer[i]);
 		}
 	});
@@ -2493,6 +2545,7 @@ function displayGui(){
 
 	let close = document.getElementsByClassName('close-button');
 	document.getElementById('dat-gui').prepend(close[0]); // node vacates previous position
+	
 }
 
 
