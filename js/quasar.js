@@ -368,7 +368,7 @@ function loadSkewerData(callback) {
 
 			// individual reads of each element
 			spectra.forEach( (el) => {
-				let path = 'data/partial/spectra_' + el + '_partial_norm/'
+				let path = 'data/spectra_' + el + '_norm/'
 				d3.dsv(' ', path + file, (d) => {
 					//console.log(d.sig_norm)
 					return {
@@ -1823,7 +1823,7 @@ function plotGalaxyImage(idx){
 	
 		var galaxyImage = svg.append('div')
 		galaxyImage.append('img')
-			.attr('src', 'data/partial/galaxyImages_partial/' + g.NSAID + '.jpg')
+			.attr('src', 'data/galaxyImages/' + g.NSAID + '.jpg')
 			//.attr('src', 'data/galaxyImages/' + g.NSAID + '.jpg')
 			.attr('width', '160px')
 			.on('mouseover', (j) => {			
