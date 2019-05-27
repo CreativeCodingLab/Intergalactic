@@ -1,4 +1,4 @@
-galaxyData=data/galaxiesInSdssSlice_viz.dat
+galaxyData=data/galaxiesInSdssSlice_viz_fil.dat
 galaxyRvirScalar=1
 galaxyRedHSL=hsl(7, 100%, 30%)
 galaxyBlueHSL=hsl(212, 100%, 35%)

@@ -365,7 +365,7 @@
 		<script src="libs/THREE.TextSprite.js"></script>
 		<script src="libs/dat.gui.min.js"></script>
 		<script src="libs/d3.min.js"></script>
-		<script src="js/quasar.min.js"></script>
+		<script src="js/quasar.js"></script>
 		
 
 		<script type="x-shader/x-vertex" id="vertexshader">
@@ -406,6 +406,7 @@
 			uniform vec3 color;
 			uniform vec3 redColor;
 			uniform vec3 blueColor;
+			uniform vec3 filamentColor;
 			uniform sampler2D texture;
 
 			varying float vColor;
@@ -435,13 +436,21 @@
 				//	useColor = vec4(1.0,1.0,1.0,1.0);
 				//} else {
 
-
+				/*
 					if (vColor > -0.1 && vColor < 0.1) {
 						useColor = vec4(redColor.rgb,1.0);
 					} else if (vColor > 0.9 && vColor < 1.1) {
 						useColor = vec4(blueColor.rgb,1.0);
 					} else {
 						useColor = vec4(0.0,1.0,0.0,1.0);
+					}
+				*/
+					if (vColor > -0.1 && vColor < 0.1) {
+						useColor = vec4(redColor.rgb,1.0);
+					} else if (vColor > 0.9 && vColor < 1.1) {
+						useColor = vec4(blueColor.rgb,1.0);
+					} else if (vColor > 1.9 && vColor < 2.1) {
+						useColor = vec4(filamentColor.rgb,1.0);
 					}
 				//}
 
