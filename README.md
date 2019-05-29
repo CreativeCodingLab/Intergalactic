@@ -66,7 +66,7 @@ IGM-Vis was created by an interdisciplinary team of researchers at University of
 - Dept. of Astronomy & Astrophysics: Joseph N. Burchett, J. X. Prochaska;
 - Dept. of Computational Media: David Abramov, Cassia Artanegara, Jasmine Otto, and Angus G. Forbes
 
-An article introducing IGM-Vis is currently under review for EuroVis’19.
+An article describing IGM-Vis is accepted to EuroVis’19, and a pre-print is available on ArXiv at https://arxiv.org/abs/1812.07092
 
 
 
