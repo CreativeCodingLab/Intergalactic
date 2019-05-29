@@ -16,6 +16,9 @@ var quasar_galaxy_EW_neighbors = []
 var neighbors = []
 var v = []
 
+var filMode = false
+var selectedFilID
+
 // instantiate once
 var renderer, scene, camera, controls;
 var gui, guiParams;
@@ -39,6 +42,7 @@ var galaxyFile, skewerFile;
 var galaxyRvirScalar = 1;
 var galaxyRedHSL = "hsl(0, 90%, 50%)";
 var galaxyBlueHSL = "hsl(200, 70%, 50%)";
+var galaxyFilamentHSL = "hsl(150, 100%, 50%)";
 var skewerAbsorptionMinHSL = "hsl(100, 90%, 50%)";
 var skewerAbsorptionMaxHSL = "hsl(280, 90%, 60%)";
 var showLabels = true;
@@ -133,6 +137,7 @@ function updateDepthDomain(min, max){
 function loadGalaxyData(callback) {
 	//loadProjections()
 	
+	/*
 	d3.json('data/galaxies.json').then(function(d){
 		galaxies = d
 		processGalaxyData(galaxies);
@@ -140,7 +145,8 @@ function loadGalaxyData(callback) {
 		callback();
 	//}).then((data) => {
 	});
-	/*
+	*/
+	
 	d3.dsv(" ", galaxyFile, (d) => {
 		return {
 			'NSAID': d.NSAID,
@@ -153,14 +159,17 @@ function loadGalaxyData(callback) {
 			'rvir' : d.rvir,
 			'log_sSFR': d.log_sSFR,
 			'color': d.color,
-			'position': sphericalToCartesian(d.RA,d.DEC,d.redshift)
+			'position': sphericalToCartesian(d.RA,d.DEC,d.redshift),
+			'filID' : d.filID,
+			'filNgal0p5' : d.filNgal0p5,
+			'filNgal1p0' : d.filNgal1p0
 		}
 	}).then((data) => {
 		console.log(data)
 		processGalaxyData(data);
 		galaxies = data; // TODO: as new Map()
 		callback();
-	});*/
+	});
 }
 
 
@@ -1024,6 +1033,111 @@ function EW_plot(){
 		});
 }
 
+var galaxiesInFilaments = []
+function colorFilament(NSAID, filID){
+	
+	//console.log(galData)
+	if(NSAID && !filID){
+		for(i = 0; i<galaxies.length; i++){
+			if(galaxies[i].NSAID = NSAID){
+				selectedFilID = galaxies[i].filID
+			}
+		}
+	}
+	else if(!NSAID && filID){
+		selectedFilID = filID
+	}
+
+	else if(NSAID && filID){
+		selectedFilID = filID
+	}
+
+	//selectedFilID = filID
+	for(i = 0; i < galaxies.length; i++){
+		if(filMode && galaxies[i].filID != -99 && galaxies[i].filID == selectedFilID){
+			//galaxiesInFilaments.push(i) //uncomment for paint brush mode
+			boxOfPoints.geometry.attributes.customColor.array[ i ] = 2.0;
+		}
+		else{
+			if(galaxies[i].color == "blue"){
+				boxOfPoints.geometry.attributes.customColor.array[ i ] = 1.0;
+			}
+			if(galaxies[i].color == "red"){
+				boxOfPoints.geometry.attributes.customColor.array[ i ] = 0.0;
+			}
+		}
+			//e.push(galaxies[i])
+	}
+
+	//uncomment for paint brush mode
+	if (filMode){
+		for (i = 0; i < galaxiesInFilaments.length; i++){
+		
+			boxOfPoints.geometry.attributes.customColor.array[ galaxiesInFilaments[i] ] = 2.0;
+		}
+	
+	}
+	
+	//console.log(d)
+
+	boxOfPoints.geometry.attributes.customColor.needsUpdate = true;
+	//processGalaxyData(d)
+	//processGalaxyData(e)
+
+}
+
+function colFil(NSAID, filID){
+	
+	//console.log(galData)
+	if(!NSAID && filID){
+		selectedFilID = filID
+	}
+
+	else if(NSAID && filID){
+		selectedFilID = filID
+	}
+	else if(NSAID && !filID){
+		for(i = 0; i<galaxies.length; i++){
+			if(galaxies[i].NSAID == NSAID){
+				selectedFilID = galaxies[i].filID
+			}
+		}
+	}
+
+	//selectedFilID = filID
+	for(i = 0; i < galaxies.length; i++){
+		if(galaxies[i].filID != -99 && galaxies[i].filID == selectedFilID){
+			galaxiesInFilaments.push(i)
+			boxOfPoints.geometry.attributes.customColor.array[ i ] = 2.0;
+		}
+		else{
+			if(galaxies[i].color == "blue"){
+				boxOfPoints.geometry.attributes.customColor.array[ i ] = 1.0;
+			}
+			if(galaxies[i].color == "red"){
+				boxOfPoints.geometry.attributes.customColor.array[ i ] = 0.0;
+			}
+		}
+			//e.push(galaxies[i])
+	}
+
+	for (i = 0; i < galaxiesInFilaments.length; i++){
+	
+		boxOfPoints.geometry.attributes.customColor.array[ galaxiesInFilaments[i] ] = 2.0;
+	}
+	
+	
+	
+	//console.log(d)
+
+	boxOfPoints.geometry.attributes.customColor.needsUpdate = true;
+	//processGalaxyData(d)
+	//processGalaxyData(e)
+
+
+	
+}
+
 function filterNeighborsEW(EW,z_min,z_max,skewerName,err){
 	let mn = z_min
 	let mx = z_max
@@ -1348,6 +1462,9 @@ function selectPoint() {
 	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
 
 	plotGalaxyImage(pointOverIdx)
+	if (filMode){
+		colorFilament(galaxies[pointOverIdx].NSAID,galaxies[pointOverIdx].filID)
+	}
 	
 	//updates color of selected skewer neighbor (galaxy) to red when hovered over
 	/*
@@ -2083,7 +2200,7 @@ function sphericalToCartesian(RA,DEC,redshift) {
 	var sph_pos = new THREE.Spherical(r,phi,theta)
 		//Spherical( radius : Float, phi POLAR : Float, theta EQUATOR : Float )
 		//PHI AND THETA ARE SWAPPED (physics vs math notation)
-	var x = sph_pos.radius*Math.cos(sph_pos.phi)*Math.sin(sph_pos.theta)
+	var x = -sph_pos.radius*Math.cos(sph_pos.phi)*Math.sin(sph_pos.theta)
 	var y = sph_pos.radius*Math.cos(sph_pos.phi)*Math.cos(sph_pos.theta)
 	var z = sph_pos.radius*Math.sin(sph_pos.phi)
 	var cartesian_position = new THREE.Vector3(x,y,z)
@@ -2105,6 +2222,7 @@ function processGalaxyData(data) {
 	var visibles = new Float32Array( n * 1 );
 	var sizes = new Float32Array( n );
 
+
 	// var color = new THREE.Color( 0xffffff );
 
 	for ( var i = 0; i < n; ++i ) {
@@ -2116,11 +2234,26 @@ function processGalaxyData(data) {
 		var vertex = new THREE.Vector3(data[i].position.x,data[i].position.y,data[i].position.z)//.clone()
 		//var vertex = data[i].position.clone()
 		vertex.toArray( positions, i * 3 );
+		
+		if(u.color == "red"){
+			colors[i] = 0;
+		}
 
+		else if(u.color == "blue"){
+			colors[i] = 1;
+		}
+		
+		if(filMode && selectedFilID == u.filID){
+			colors[i] = 2;
+		}
+		
+		/*
 		colors[i] = u.color == "red" ? 0 :
-					  u.color == "blue" ? 1 : 2
+					u.color == "blue" ? 1 : 2
+		
+		console.log(colors[i], u.color)
 		// wasn't equality test b/c carriage returns vary (but d3 normalizes?)
-
+		*/
 		sizes[i] = u.rvir;
 	}
 	// console.log(colors);
@@ -2140,6 +2273,7 @@ function processGalaxyData(data) {
 			//color:     { value: new THREE.Color( 0xffffff ) },
 			redColor:  { value: new THREE.Color(galaxyRedHSL) },
 			blueColor: { value: new THREE.Color(galaxyBlueHSL) },
+			filamentColor: { value: new THREE.Color(galaxyFilamentHSL) },
 			texture:   { value: tex1 },
 			galaxyRvirScalar: {value: galaxyRvirScalar}, // multiplication with galaxy Rvir now happens in the vertex shader
 		},
@@ -2152,7 +2286,7 @@ function processGalaxyData(data) {
 
 	});
 
-
+		
 		boxOfPoints = new THREE.Points( geometry, material );
 		scene.add( boxOfPoints );
 	
@@ -2458,16 +2592,19 @@ function displayGui(){
 	//I make use of the fact that THREE.Color can switch between rgb and hsl
 	var galRed = new THREE.Color(galaxyRedHSL);
 	var galBlue = new THREE.Color(galaxyBlueHSL);
+	var galFilament = new THREE.Color(galaxyFilamentHSL);
 	var skewMinHSL = new THREE.Color(skewerAbsorptionMinHSL);
 	var skewMaxHSL = new THREE.Color(skewerAbsorptionMaxHSL);
 
 	//Define gui Parameters
 	guiParams = {
+		filMode: false,
 		galNearSkewer: false,
 		galDist2Skewer: distanceFromSkewer,
 		galRvirScal: galaxyRvirScalar,
 		galRedHSL: [galRed.r * 255, galRed.g * 255, galRed.b * 255],
 		galBlueHSL: [galBlue.r * 255, galBlue.g * 255, galBlue.b * 255],
+		galaxyFilamentHSL: [galFilament.r * 255, galFilament.g * 255, galFilament.b * 255],
 		//skewerWidth: skewerWidth,
 		skewerAbsorMinHSL: [skewMinHSL.r * 255, skewMinHSL.g * 255, skewMinHSL.b * 255],
 		skewerAbsorMaxHSL: [skewMaxHSL.r * 255, skewMaxHSL.g * 255, skewMaxHSL.b * 255],
@@ -2482,10 +2619,12 @@ function displayGui(){
 	//Galaxies Options-----
 	var galaxyFolder = gui.addFolder('Galaxies');
 	// var galNearSkew =      galaxyFolder.add(guiParams, "galNearSkewer").name("Galaxies Close to Skewers");
+	var filM = galaxyFolder.add(guiParams, "filMode").name("Filament Highlight Mode");
 	// var galRangeNearSkew = galaxyFolder.add(guiParams, "galDist2Skewer", 0.01, 6).name("Range From Skewer");
 	var galaxyRvirSc = galaxyFolder.add(guiParams, "galRvirScal", galaxyRvirScalar/2, galaxyRvirScalar*10).name("Rvir Scalar");
 	var galaxyRed  = galaxyFolder.addColor(guiParams, "galRedHSL").name("Red Value");
 	var galaxyBlue = galaxyFolder.addColor(guiParams, "galBlueHSL").name("Blue Value");
+	var galaxyFilament = galaxyFolder.addColor(guiParams, "galaxyFilamentHSL").name("Filament Value");
 
 	//Skewers Options-----
 	var skewerFolder = gui.addFolder("Skewers");
@@ -2506,6 +2645,16 @@ function displayGui(){
 
 	galaxyBlue.onChange(function(value){
 		boxOfPoints.material.uniforms.blueColor.value = new THREE.Color(value[0]/255, value[1]/255, value[2]/255);
+	});
+
+	galaxyFilament.onChange(function(value){
+
+		boxOfPoints.material.uniforms.filamentColor.value = new THREE.Color(value[0]/255, value[1]/255, value[2]/255);
+	});
+
+	filM.onChange(function(value){
+		console.log(value)
+		filMode = value
 	});
 
 	skewerMinAbs.onChange(function(value){
