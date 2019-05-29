@@ -1034,12 +1034,79 @@ function EW_plot(){
 }
 
 var galaxiesInFilaments = []
-function colorFilament(galData){
+function colorFilament(NSAID, filID){
 	
 	//console.log(galData)
-	selectedFilID = galData.filID
+	if(NSAID && !filID){
+		for(i = 0; i<galaxies.length; i++){
+			if(galaxies[i].NSAID = NSAID){
+				selectedFilID = galaxies[i].filID
+			}
+		}
+	}
+	else if(!NSAID && filID){
+		selectedFilID = filID
+	}
+
+	else if(NSAID && filID){
+		selectedFilID = filID
+	}
+
+	//selectedFilID = filID
 	for(i = 0; i < galaxies.length; i++){
 		if(filMode && galaxies[i].filID != -99 && galaxies[i].filID == selectedFilID){
+			//galaxiesInFilaments.push(i) //uncomment for paint brush mode
+			boxOfPoints.geometry.attributes.customColor.array[ i ] = 2.0;
+		}
+		else{
+			if(galaxies[i].color == "blue"){
+				boxOfPoints.geometry.attributes.customColor.array[ i ] = 1.0;
+			}
+			if(galaxies[i].color == "red"){
+				boxOfPoints.geometry.attributes.customColor.array[ i ] = 0.0;
+			}
+		}
+			//e.push(galaxies[i])
+	}
+
+	//uncomment for paint brush mode
+	if (filMode){
+		for (i = 0; i < galaxiesInFilaments.length; i++){
+		
+			boxOfPoints.geometry.attributes.customColor.array[ galaxiesInFilaments[i] ] = 2.0;
+		}
+	
+	}
+	
+	//console.log(d)
+
+	boxOfPoints.geometry.attributes.customColor.needsUpdate = true;
+	//processGalaxyData(d)
+	//processGalaxyData(e)
+
+}
+
+function colFil(NSAID, filID){
+	
+	//console.log(galData)
+	if(!NSAID && filID){
+		selectedFilID = filID
+	}
+
+	else if(NSAID && filID){
+		selectedFilID = filID
+	}
+	else if(NSAID && !filID){
+		for(i = 0; i<galaxies.length; i++){
+			if(galaxies[i].NSAID == NSAID){
+				selectedFilID = galaxies[i].filID
+			}
+		}
+	}
+
+	//selectedFilID = filID
+	for(i = 0; i < galaxies.length; i++){
+		if(galaxies[i].filID != -99 && galaxies[i].filID == selectedFilID){
 			galaxiesInFilaments.push(i)
 			boxOfPoints.geometry.attributes.customColor.array[ i ] = 2.0;
 		}
@@ -1054,13 +1121,12 @@ function colorFilament(galData){
 			//e.push(galaxies[i])
 	}
 
-	if (filMode){
-		for (i = 0; i < galaxiesInFilaments.length; i++){
-		
-			boxOfPoints.geometry.attributes.customColor.array[ galaxiesInFilaments[i] ] = 2.0;
-		}
+	for (i = 0; i < galaxiesInFilaments.length; i++){
 	
+		boxOfPoints.geometry.attributes.customColor.array[ galaxiesInFilaments[i] ] = 2.0;
 	}
+	
+	
 	
 	//console.log(d)
 
@@ -1397,7 +1463,7 @@ function selectPoint() {
 
 	plotGalaxyImage(pointOverIdx)
 	if (filMode){
-		colorFilament(galaxies[pointOverIdx])
+		colorFilament(galaxies[pointOverIdx].NSAID,galaxies[pointOverIdx].filID)
 	}
 	
 	//updates color of selected skewer neighbor (galaxy) to red when hovered over
@@ -2134,7 +2200,7 @@ function sphericalToCartesian(RA,DEC,redshift) {
 	var sph_pos = new THREE.Spherical(r,phi,theta)
 		//Spherical( radius : Float, phi POLAR : Float, theta EQUATOR : Float )
 		//PHI AND THETA ARE SWAPPED (physics vs math notation)
-	var x = sph_pos.radius*Math.cos(sph_pos.phi)*Math.sin(sph_pos.theta)
+	var x = -sph_pos.radius*Math.cos(sph_pos.phi)*Math.sin(sph_pos.theta)
 	var y = sph_pos.radius*Math.cos(sph_pos.phi)*Math.cos(sph_pos.theta)
 	var z = sph_pos.radius*Math.sin(sph_pos.phi)
 	var cartesian_position = new THREE.Vector3(x,y,z)
