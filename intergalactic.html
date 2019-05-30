@@ -393,6 +393,7 @@
 				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 
 				gl_PointSize = sizeScaled * ( 300.0 / -mvPosition.z );
+
 				//gl_PointSize = sizeScaled * 300.0; // * ( 300.0 / -mvPosition.z );
 
 				gl_Position = projectionMatrix * mvPosition;
@@ -407,6 +408,8 @@
 			uniform vec3 redColor;
 			uniform vec3 blueColor;
 			uniform vec3 filamentColor;
+			uniform vec3 group1Color;
+			uniform vec3 group2Color;
 			uniform sampler2D texture;
 
 			varying float vColor;
@@ -451,6 +454,12 @@
 						useColor = vec4(blueColor.rgb,1.0);
 					} else if (vColor > 1.9 && vColor < 2.1) {
 						useColor = vec4(filamentColor.rgb,1.0);
+					}
+					else if (vColor > 2.9 && vColor < 3.1){
+						useColor = vec4(group1Color.rgb,1.0);
+					}
+					else if (vColor > 3.9 && vColor < 4.1){
+						useColor = vec4(group2Color.rgb,1.0);
 					}
 				//}
 

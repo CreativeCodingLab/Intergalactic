@@ -43,6 +43,8 @@ var galaxyRvirScalar = 1;
 var galaxyRedHSL = "hsl(0, 90%, 50%)";
 var galaxyBlueHSL = "hsl(200, 70%, 50%)";
 var galaxyFilamentHSL = "hsl(150, 100%, 50%)";
+var galaxySubset1HSL = "hsl(150, 100%, 50%)";
+var galaxySubset2HSL = "hsl(150, 100%, 50%)";
 var skewerAbsorptionMinHSL = "hsl(100, 90%, 50%)";
 var skewerAbsorptionMaxHSL = "hsl(280, 90%, 60%)";
 var showLabels = true;
@@ -1034,6 +1036,8 @@ function EW_plot(){
 }
 
 var galaxiesInFilaments = []
+
+//this function is used to display filaments as galaxies are hovered over
 function colorFilament(NSAID, filID){
 	
 	//console.log(galData)
@@ -1058,11 +1062,20 @@ function colorFilament(NSAID, filID){
 			//galaxiesInFilaments.push(i) //uncomment for paint brush mode
 			boxOfPoints.geometry.attributes.customColor.array[ i ] = 2.0;
 		}
+		
 		else{
-			if(galaxies[i].color == "blue"){
+			if(galaxySubset1.includes(galaxies[i].NSAID)){
+				boxOfPoints.geometry.attributes.customColor.array[ i ] = 3.0;
+				cs[i] = 1.0;
+			}
+			else if(galaxySubset2.includes(galaxies[i].NSAID)){
+				boxOfPoints.geometry.attributes.customColor.array[ i ] = 4.0;
+				cs[i] = 1.0;
+			}
+			else if(galaxies[i].color == "blue"){
 				boxOfPoints.geometry.attributes.customColor.array[ i ] = 1.0;
 			}
-			if(galaxies[i].color == "red"){
+			else if(galaxies[i].color == "red"){
 				boxOfPoints.geometry.attributes.customColor.array[ i ] = 0.0;
 			}
 		}
@@ -1080,12 +1093,15 @@ function colorFilament(NSAID, filID){
 	
 	//console.log(d)
 
+	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
 	boxOfPoints.geometry.attributes.customColor.needsUpdate = true;
 	//processGalaxyData(d)
 	//processGalaxyData(e)
 
 }
 
+
+//use this for persistent coloring of filaments
 function colFil(NSAID, filID){
 	
 	//console.log(galData)
@@ -1110,6 +1126,17 @@ function colFil(NSAID, filID){
 			galaxiesInFilaments.push(i)
 			boxOfPoints.geometry.attributes.customColor.array[ i ] = 2.0;
 		}
+		else if(galaxies[i].NSAID == NSAID && groupNumber === 1){
+			galaxySubset1.push(i)
+			boxOfPoints.geometry.attributes.customColor.array[ i ] = 3.0;
+			cs[i] = 1.0;
+		}
+	
+		else if(galaxies[i].NSAID == NSAID && groupNumber === 2){
+			galaxySubset2.push(i)
+			boxOfPoints.geometry.attributes.customColor.array[ i ] = 4.0;
+			cs[i] = 1.0;
+		}
 		else{
 			if(galaxies[i].color == "blue"){
 				boxOfPoints.geometry.attributes.customColor.array[ i ] = 1.0;
@@ -1130,12 +1157,57 @@ function colFil(NSAID, filID){
 	
 	//console.log(d)
 
+	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
 	boxOfPoints.geometry.attributes.customColor.needsUpdate = true;
 	//processGalaxyData(d)
 	//processGalaxyData(e)
 
 
 	
+}
+galaxySubset1 = []
+galaxySubset2 = []
+function highlightCustomGalaxies(NSAID,groupNumber){ //groupNumber should be 1 or 2
+	
+	var cs = boxOfPoints.geometry.attributes.isSelected.array;
+	
+	for(i = 0; i < galaxies.length; i++){
+	
+		if(galaxies[i].NSAID == NSAID && groupNumber === 1){
+			galaxySubset1.push(i)
+			boxOfPoints.geometry.attributes.customColor.array[ i ] = 3.0;
+			cs[i] = 1.0;
+		}
+	
+		else if(galaxies[i].NSAID == NSAID && groupNumber === 2){
+			galaxySubset2.push(i)
+			boxOfPoints.geometry.attributes.customColor.array[ i ] = 4.0;
+			cs[i] = 1.0;
+		}
+	
+		else{
+			if(galaxies[i].color == "blue"){
+				boxOfPoints.geometry.attributes.customColor.array[ i ] = 1.0;
+			}
+			if(galaxies[i].color == "red"){
+				boxOfPoints.geometry.attributes.customColor.array[ i ] = 0.0;
+			}
+		}
+	}
+	
+	for (i = 0; i < galaxySubset1.length; i++){
+		boxOfPoints.geometry.attributes.customColor.array[ galaxySubset1[i] ] = 3.0;
+		cs[i] = 1.0;
+	}
+	
+	for (i = 0; i < galaxySubset2.length; i++){
+		boxOfPoints.geometry.attributes.customColor.array[ galaxySubset2[i] ] = 4.0;
+		cs[i] = 1.0;
+	}
+	
+	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+	boxOfPoints.geometry.attributes.customColor.needsUpdate = true;
+
 }
 
 function filterNeighborsEW(EW,z_min,z_max,skewerName,err){
@@ -1228,6 +1300,16 @@ function onKeyDown(event) {
 		if(EW_stat == 2){
 			d3.select('body').select('#EW-plot').select('#EWplot').select('.EW-status').remove()
 			d3.select('body').select('#EW-plot').select('#EWplot').append('text').attr('class','EW-status').text('select center point')
+		}
+	}
+
+	//activate filament mode
+	if ( keyChar == 'F'){
+		if (filMode){
+			filMode = false
+		}
+		else{
+			filMode = true
 		}
 	}
 	
@@ -1456,6 +1538,16 @@ function selectPoint() {
 	var cs = boxOfPoints.geometry.attributes.isSelected.array;
 	for (var p = 0; p < cs.length; p++) {
 		cs[p] = 0.0;
+
+	}
+	for (i = 0; i < galaxySubset1.length; i++){
+		boxOfPoints.geometry.attributes.customColor.array[ galaxySubset1[i] ] = 3.0;
+		cs[galaxySubset1[i]] = 1.0;
+	}
+	
+	for (i = 0; i < galaxySubset2.length; i++){
+		boxOfPoints.geometry.attributes.customColor.array[ galaxySubset2[i] ] = 4.0;
+		cs[galaxySubset2[i]] = 1.0;
 	}
 	cs[pointOverIdx] = 1.0;
 	prevPointOverIdx = pointOverIdx;
@@ -1479,6 +1571,13 @@ function unselectPoint() {
 	var cs = boxOfPoints.geometry.attributes.isSelected.array;
 	for (var p = 0; p < cs.length; p++) {
 		cs[p] = 0.0;
+	}
+	for (i = 0; i < galaxySubset1.length; i++){
+		cs[galaxySubset1[i]] = 1.0;
+	}
+	
+	for (i = 0; i < galaxySubset2.length; i++){
+		cs[galaxySubset2[i]] = 1.0;
 	}
 	prevPointOverIdx = -1;
 	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
@@ -2228,7 +2327,7 @@ function processGalaxyData(data) {
 	for ( var i = 0; i < n; ++i ) {
 		selects[ i ] = 0.0;
 		visibles[ i ] = 1.0;
-
+		
 		let u = data[i];
 
 		var vertex = new THREE.Vector3(data[i].position.x,data[i].position.y,data[i].position.z)//.clone()
@@ -2247,6 +2346,14 @@ function processGalaxyData(data) {
 			colors[i] = 2;
 		}
 		
+		if(galaxySubset1.includes(i)){
+			colors[i] = 3;
+		}
+
+		if(galaxySubset2.includes(i)){
+			colors[i] = 4;
+		}
+
 		/*
 		colors[i] = u.color == "red" ? 0 :
 					u.color == "blue" ? 1 : 2
@@ -2274,6 +2381,8 @@ function processGalaxyData(data) {
 			redColor:  { value: new THREE.Color(galaxyRedHSL) },
 			blueColor: { value: new THREE.Color(galaxyBlueHSL) },
 			filamentColor: { value: new THREE.Color(galaxyFilamentHSL) },
+			group1Color: { value: new THREE.Color(galaxySubset1HSL) },
+			group2Color: { value: new THREE.Color(galaxySubset2HSL) },
 			texture:   { value: tex1 },
 			galaxyRvirScalar: {value: galaxyRvirScalar}, // multiplication with galaxy Rvir now happens in the vertex shader
 		},
@@ -2593,6 +2702,8 @@ function displayGui(){
 	var galRed = new THREE.Color(galaxyRedHSL);
 	var galBlue = new THREE.Color(galaxyBlueHSL);
 	var galFilament = new THREE.Color(galaxyFilamentHSL);
+	var galaxySubset1 = new THREE.Color(galaxySubset1HSL);
+	var galaxySubset2 = new THREE.Color(galaxySubset2HSL);
 	var skewMinHSL = new THREE.Color(skewerAbsorptionMinHSL);
 	var skewMaxHSL = new THREE.Color(skewerAbsorptionMaxHSL);
 
@@ -2605,6 +2716,8 @@ function displayGui(){
 		galRedHSL: [galRed.r * 255, galRed.g * 255, galRed.b * 255],
 		galBlueHSL: [galBlue.r * 255, galBlue.g * 255, galBlue.b * 255],
 		galaxyFilamentHSL: [galFilament.r * 255, galFilament.g * 255, galFilament.b * 255],
+		galaxySubset1HSL: [galaxySubset1.r * 255, galaxySubset1.g * 255, galaxySubset1.b * 255],
+		galaxySubset2HSL: [galaxySubset2.r * 255, galaxySubset2.g * 255, galaxySubset2.b * 255],
 		//skewerWidth: skewerWidth,
 		skewerAbsorMinHSL: [skewMinHSL.r * 255, skewMinHSL.g * 255, skewMinHSL.b * 255],
 		skewerAbsorMaxHSL: [skewMaxHSL.r * 255, skewMaxHSL.g * 255, skewMaxHSL.b * 255],
@@ -2625,6 +2738,8 @@ function displayGui(){
 	var galaxyRed  = galaxyFolder.addColor(guiParams, "galRedHSL").name("Red Value");
 	var galaxyBlue = galaxyFolder.addColor(guiParams, "galBlueHSL").name("Blue Value");
 	var galaxyFilament = galaxyFolder.addColor(guiParams, "galaxyFilamentHSL").name("Filament Value");
+	var galaxySub1 = galaxyFolder.addColor(guiParams, "galaxySubset1HSL").name("Custom Group 1 Value");
+	var galaxySub2 = galaxyFolder.addColor(guiParams, "galaxySubset2HSL").name("Custom Group 2 Value");
 
 	//Skewers Options-----
 	var skewerFolder = gui.addFolder("Skewers");
@@ -2648,8 +2763,15 @@ function displayGui(){
 	});
 
 	galaxyFilament.onChange(function(value){
-
 		boxOfPoints.material.uniforms.filamentColor.value = new THREE.Color(value[0]/255, value[1]/255, value[2]/255);
+	});
+
+	galaxySub1.onChange(function(value){
+		boxOfPoints.material.uniforms.group1Color.value = new THREE.Color(value[0]/255, value[1]/255, value[2]/255);
+	});
+
+	galaxySub2.onChange(function(value){
+		boxOfPoints.material.uniforms.group2Color.value = new THREE.Color(value[0]/255, value[1]/255, value[2]/255);
 	});
 
 	filM.onChange(function(value){
