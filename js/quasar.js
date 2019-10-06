@@ -36,6 +36,9 @@ var skewer = [];
 var skewerData = new Map();
 var tex1 = new THREE.TextureLoader().load( "blur.png" );
 var optionFile = 'options.txt';
+var galaxySubset1 = []
+var galaxySubset2 = []
+
 
 // mutable params
 var galaxyFile, skewerFile;
@@ -43,8 +46,8 @@ var galaxyRvirScalar = 1;
 var galaxyRedHSL = "hsl(0, 90%, 50%)";
 var galaxyBlueHSL = "hsl(200, 70%, 50%)";
 var galaxyFilamentHSL = "hsl(150, 100%, 50%)";
-var galaxySubset1HSL = "hsl(150, 100%, 50%)";
-var galaxySubset2HSL = "hsl(150, 100%, 50%)";
+var galaxySubset1HSL = "hsl(60, 100%, 50%)";
+var galaxySubset2HSL = "hsl(300, 100%, 50%)";
 var skewerAbsorptionMinHSL = "hsl(100, 90%, 50%)";
 var skewerAbsorptionMaxHSL = "hsl(280, 90%, 60%)";
 var showLabels = true;
@@ -216,6 +219,24 @@ function lookUp(redshift){
 function loadCloseImpactLookUp(){
 	d3.dsv(' ', 'data/galaxyCloseImpactLookup.dat').then(function(d){
 		impactParameters = d
+	})
+}
+
+function loadGalaxySubset1(){
+	d3.dsv(' ', 'data/GalaxySubset1.dat', (d) => {
+			highlightCustomGalaxies(d.NSAID,1)
+			return {
+				'NSAID': +d.NSAID
+			}
+		})
+}
+
+function loadGalaxySubset2(){
+	d3.dsv(' ', 'data/GalaxySubset2.dat', (d) => {
+		highlightCustomGalaxies(d.NSAID,2)
+		return {
+			'NSAID': +d.NSAID
+		}
 	})
 }
 
@@ -1064,19 +1085,23 @@ function colorFilament(NSAID, filID){
 		}
 		
 		else{
-			if(galaxySubset1.includes(galaxies[i].NSAID)){
-				boxOfPoints.geometry.attributes.customColor.array[ i ] = 3.0;
-				cs[i] = 1.0;
-			}
-			else if(galaxySubset2.includes(galaxies[i].NSAID)){
-				boxOfPoints.geometry.attributes.customColor.array[ i ] = 4.0;
-				cs[i] = 1.0;
-			}
-			else if(galaxies[i].color == "blue"){
+			if(galaxies[i].color == "blue"){
 				boxOfPoints.geometry.attributes.customColor.array[ i ] = 1.0;
 			}
 			else if(galaxies[i].color == "red"){
 				boxOfPoints.geometry.attributes.customColor.array[ i ] = 0.0;
+			}
+			for(j=0;j<galaxySubset1.length;j++){
+				if(galaxySubset1[j].NSAID == parseInt(galaxies[i].NSAID)){
+					boxOfPoints.geometry.attributes.customColor.array[ i ] = 3.0;
+					cs[i] = 1.0;
+				}
+			}
+			for(j=0;j<galaxySubset2.length;j++){
+				if(galaxySubset2[j].NSAID == parseInt(galaxies[i].NSAID)){
+					boxOfPoints.geometry.attributes.customColor.array[ i ] = 4.0;
+					cs[i] = 1.0;
+				}
 			}
 		}
 			//e.push(galaxies[i])
@@ -1165,8 +1190,7 @@ function colFil(NSAID, filID){
 
 	
 }
-galaxySubset1 = []
-galaxySubset2 = []
+
 function highlightCustomGalaxies(NSAID,groupNumber){ //groupNumber should be 1 or 2
 	
 	var cs = boxOfPoints.geometry.attributes.isSelected.array;
@@ -1205,6 +1229,25 @@ function highlightCustomGalaxies(NSAID,groupNumber){ //groupNumber should be 1 o
 		cs[i] = 1.0;
 	}
 	
+	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
+	boxOfPoints.geometry.attributes.customColor.needsUpdate = true;
+
+}
+
+function hideCustomGalaxies(){ //groupNumber should be 1 or 2
+	
+	var cs = boxOfPoints.geometry.attributes.isSelected.array;
+	
+	for(j=0;j<galaxies.length;j++){
+		if(galaxies[j].color == "blue"){
+			boxOfPoints.geometry.attributes.customColor.array[ j ] = 1.0;
+		}
+		if(galaxies[j].color == "red"){
+			boxOfPoints.geometry.attributes.customColor.array[ j ] = 0.0;
+		}
+		cs[j] = 0.0;
+	}
+
 	boxOfPoints.geometry.attributes.isSelected.needsUpdate = true;
 	boxOfPoints.geometry.attributes.customColor.needsUpdate = true;
 
@@ -2716,6 +2759,8 @@ function displayGui(){
 		galRedHSL: [galRed.r * 255, galRed.g * 255, galRed.b * 255],
 		galBlueHSL: [galBlue.r * 255, galBlue.g * 255, galBlue.b * 255],
 		galaxyFilamentHSL: [galFilament.r * 255, galFilament.g * 255, galFilament.b * 255],
+		galaxySubSelect: false,
+		// galaxySubSelect: false,
 		galaxySubset1HSL: [galaxySubset1.r * 255, galaxySubset1.g * 255, galaxySubset1.b * 255],
 		galaxySubset2HSL: [galaxySubset2.r * 255, galaxySubset2.g * 255, galaxySubset2.b * 255],
 		//skewerWidth: skewerWidth,
@@ -2738,8 +2783,11 @@ function displayGui(){
 	var galaxyRed  = galaxyFolder.addColor(guiParams, "galRedHSL").name("Red Value");
 	var galaxyBlue = galaxyFolder.addColor(guiParams, "galBlueHSL").name("Blue Value");
 	var galaxyFilament = galaxyFolder.addColor(guiParams, "galaxyFilamentHSL").name("Filament Value");
-	var galaxySub1 = galaxyFolder.addColor(guiParams, "galaxySubset1HSL").name("Custom Group 1 Value");
-	var galaxySub2 = galaxyFolder.addColor(guiParams, "galaxySubset2HSL").name("Custom Group 2 Value");
+	var galaxySub1 = galaxyFolder.addColor(guiParams, "galaxySubset1HSL").name("Custom Set 1 Value");
+	// var galaxySubset1Sel = galaxyFolder.add(guiParams, "galaxySub1Select").name("Show Set 1");
+	var galaxySub2 = galaxyFolder.addColor(guiParams, "galaxySubset2HSL").name("Custom Set 2 Value");
+	var galaxySubsetSel = galaxyFolder.add(guiParams, "galaxySubSelect").name("Show Custom Set");
+	// var galaxySub2Select = galaxyFolder.add()
 
 	//Skewers Options-----
 	var skewerFolder = gui.addFolder("Skewers");
@@ -2768,6 +2816,16 @@ function displayGui(){
 
 	galaxySub1.onChange(function(value){
 		boxOfPoints.material.uniforms.group1Color.value = new THREE.Color(value[0]/255, value[1]/255, value[2]/255);
+	});
+
+	galaxySubsetSel.onChange(function(value){
+		if(value){
+			loadGalaxySubset1()
+			loadGalaxySubset2()
+		}
+		else{
+			hideCustomGalaxies()
+		}
 	});
 
 	galaxySub2.onChange(function(value){
