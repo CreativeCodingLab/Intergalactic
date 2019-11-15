@@ -223,7 +223,7 @@ function loadCloseImpactLookUp(){
 }
 
 function loadGalaxySubset1(){
-	d3.dsv(' ', 'data/GalaxySubset1.dat', (d) => {
+	d3.dsv(' ', 'data/galaxySubset1.dat', (d) => {
 			highlightCustomGalaxies(d.NSAID,1)
 			return {
 				'NSAID': +d.NSAID
@@ -232,7 +232,7 @@ function loadGalaxySubset1(){
 }
 
 function loadGalaxySubset2(){
-	d3.dsv(' ', 'data/GalaxySubset2.dat', (d) => {
+	d3.dsv(' ', 'data/galaxySubset2.dat', (d) => {
 		highlightCustomGalaxies(d.NSAID,2)
 		return {
 			'NSAID': +d.NSAID
